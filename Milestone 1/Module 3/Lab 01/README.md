@@ -10,25 +10,6 @@ By the end of this lab, you can:
 - Use a small Python script to verify your math on real numbers.
 - Decide when a system needs redundancy and how much redundancy helps.
 
-## Before You Start
-
-You should be comfortable with:
-
-- Opening a terminal and running two or three commands.
-- Editing a text file and saving it.
-- Basic Python. You only need to read and run a short script.
-
-You will need:
-
-- Python 3.8 or newer on your machine.
-- About 45 to 60 minutes of focused time.
-
-You do not need:
-
-- A cloud account.
-- A database.
-- Any prior knowledge of distributed systems.
-
 ## Why Are We Doing This Lab?
 
 Real systems break. Hard drives fail. Servers reboot. Networks drop. A single broken piece can take down a whole product.
