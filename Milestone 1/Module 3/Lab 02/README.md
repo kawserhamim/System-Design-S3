@@ -1,185 +1,194 @@
-# API SLOs and Error Budgets
+# SLOs and Error Budgets
 
-![API requests become reliability targets and error budgets](images/thumb.png)
+![Set a 99.9% target, allow a 0.1% error budget, and watch for fast burn](images/thumb.png)
 
-Define good API responses, set reliability targets, and calculate how many bad responses a sample API can afford.
+An application programming interface (API) lets programs request data or actions. Define good service for an Orders API, calculate its failure allowance, and write a fast-burn alert.
 
 ## Objective
 
-![Measure results, set targets, and track budget](images/objective.png)
+![Set a target, calculate its error budget, and watch for fast burn](images/thumb.png)
 
 By the end of this lab, you can:
-- Define service level indicators (SLIs), measurements of user experience.
-- Set service level objectives (SLOs), targets for those measurements.
-- Calculate a monthly error budget and its burn-rate thresholds.
+- Define a service level indicator (SLI), a measurement of service quality.
+- Set a service level objective (SLO), a target for that measurement.
+- Calculate an error budget and choose burn-rate alerts.
 
 ## Deliverable
 
-![One SLO document contains definitions, budgets, and alerts](images/deliverable.png)
+![Create an SLO document and its supporting alert rule in a practice folder](images/deliverable.png)
 
-A Markdown file named `slo.md` with targets, query sketches, budgets, and alert thresholds. You need a text editor; Prometheus is optional.
+Build `slo-document.md` and its supporting `orders-api-rules.yml` in a separate practice folder. All content is included below.
 
-## What Are SLIs and SLOs?
+You need a Markdown editor and `promtool`, the Prometheus rule checker. No server is required. Linux setup is below; other platforms use [Prometheus downloads](https://prometheus.io/download/).
 
-![Observed API results are compared with a target](images/sli-slo.png)
+## SLI and SLO
 
-An SLI measures what happened. An SLO states how often that result should be good. A service level agreement (SLA) is a separate agreement that can include consequences for missing a promise.
+![Exclude cancellations and health checks before dividing good requests by valid requests](images/sli.png)
 
-| Term | Sample meaning |
-| --- | --- |
-| Success SLI | Fraction of requests returning HTTP 200 |
-| Success SLO | At least 99.9% return HTTP 200 |
-| Latency SLI | Fraction returning HTTP 200 within 300 ms |
-| Latency SLO | At least 99% meet that condition |
+An SLI measures results; an SLO sets the target. Our availability SLI counts requests without server errors. The gateway, the API's entry point, records each final HTTP status, a response code describing the outcome.
 
-## What Is an Error Budget?
+Here, 4xx responses count as good: the server handled an invalid request. Exclude cancelled requests, code 499, from both counts. This policy is specific to our API.
 
-![Allowed bad fraction multiplied by requests gives the budget](images/error-budget.png)
+## Error Budget and Burn Rate
 
-An error budget permits some bad service. Here, monthly means a rolling 30 days, or 720 hours. These budgets count requests, not minutes.
+![A 99.9% target permits 10,000 bad requests from ten million valid requests](images/budget.png)
 
-Budget equals total eligible requests multiplied by one minus the SLO. Keep the two budgets separate: a failed request counts against both, but a slow HTTP 200 counts only against latency.
+An error budget is the allowed bad fraction: `1 - SLO`. Multiply by valid requests to find the allowance. Monthly means rolling 30 days here.
 
-## Step 1: Define the API Contract
+Burn rate equals observed error ratio divided by allowed bad fraction. At steady traffic, a sustained 1x rate spends a fresh budget in 30 days; 14.4x spends it in 50 hours. A request-based SLI does not directly give downtime minutes.
 
-![Client requests are measured at the API gateway](images/step-1.png)
+## Step 1: Write the SLI
 
-Create `slo.md` and add this contract. The gateway observes incoming requests and their final outcomes.
+![Requests pass through exclusions before classification as good or bad](images/sli.png)
+
+Create `slo-document.md` in your practice folder and add this contract.
 
 ```markdown
-# Sample API SLO
+# Orders API SLO
 
-## Contract
-- Service: catalogue-api
-- Endpoint: GET /products
-- Owner: API team
-- Window: rolling 30 days
-- Eligible traffic: production GET /products requests received by the gateway.
-- Exclude health checks, metrics scrapes, and synthetic test traffic.
-- Count each retry as another request.
-- Success: HTTP 200. All other final statuses are bad, including 4xx and 5xx.
-- Gateway timeouts count as HTTP 504 outcomes.
-- Fast success: HTTP 200 with gateway duration at most 0.3 seconds.
-- Success target: 99.9% of eligible requests.
-- Fast-success target: 99% of eligible requests.
-- Requests that never reach the gateway require separate external monitoring.
+## SLI
+- Service: orders-api; owner: Orders API team.
+- Source: production gateway request counts.
+- Valid: completed requests, excluding code 499 and route /healthz.
+- Good: valid requests with HTTP 2xx, 3xx, or 4xx.
+- Bad: valid requests with HTTP 5xx, including gateway timeout 504.
+- SLI = good requests / valid requests.
+- Count each retry separately.
+- Use checks from outside the system for requests that never reach the gateway.
 ```
-**What this file does:** Defines which requests count and what makes each response good.
+**What this file does:** Defines the population and outcome used to measure availability.
 
 ---
 
-## Step 2: Write the SLI Queries
+## Step 2: Calculate the Error Budget
 
-![Good outcomes divided by all eligible outcomes form each SLI](images/step-2.png)
+![Subtract 4,000 failures from the 10,000-request allowance to leave 6,000](images/budget.png)
 
-Add these sketches under `Measurement`. Assume gateway metrics with `job="catalogue-api"` contain only eligible traffic. Counter `api_requests_total` counts outcomes by `status`; classic histogram `api_request_duration_seconds` records every outcome with that status and a `0.3`-second bucket.
+Append this worked example. Use actual valid request counts when evaluating a real month.
 
-```promql
-sum(increase(api_requests_total{job="catalogue-api",status="200"}[30d]))
-/
-sum(increase(api_requests_total{job="catalogue-api"}[30d]))
+```markdown
+## SLO
+- Availability target: at least 99.9%, over a rolling 30 days.
+
+## Monthly Error Budget
+- Allowed bad fraction: 1 - 0.999 = 0.001 = 0.1%.
+- Allowed bad requests: 10,000,000 x 0.001 = 10,000.
+
+| Measure | Calculation or value |
+| --- | --- |
+| Valid requests | 10,000,000 |
+| Allowed failures | 10,000 |
+| Observed failures | 4,000 |
+| Remaining budget | 10,000 - 4,000 = 6,000 |
+| Consumed budget | 4,000 / 10,000 = 40% |
+
+- Observed SLI: 1 - 4,000 / 10,000,000 = 99.96%; target met.
 ```
-**Explanation:** Divides successful requests by all eligible requests across the rolling window.
-
-```promql
-sum(increase(api_request_duration_seconds_bucket{job="catalogue-api",status="200",le="0.3"}[30d]))
-/
-sum(increase(api_request_duration_seconds_count{job="catalogue-api"}[30d]))
-```
-**Explanation:** Divides fast successful responses by all eligible responses, including failures.
-
-Results are fractions: `0.999` means 99.9%. Prometheus `increase()` accounts for counter resets and estimates the increase over the selected window. See the official [query functions](https://prometheus.io/docs/prometheus/latest/querying/functions/) and [histogram guidance](https://prometheus.io/docs/practices/histograms/).
-
-Initialize expected status series, including HTTP 200, to zero. A zero denominator means no traffic, not perfect service. Missing samples mean unknown health: check telemetry separately, and retain at least 30 days of data.
+**What this file does:** Records a checkable target, budget, and measured outcome.
 
 ---
 
-## Step 3: Calculate the Monthly Budgets
+## Step 3: Set the Burn-Rate Thresholds
 
-![Ten million requests produce two separate budgets](images/step-3.png)
+![Fast and medium burn page the on-call engineer; slow burn creates a ticket](images/burn-rate.png)
 
-Add a `Budgets` section using this worked example: 10,000,000 eligible requests, 4,000 failed responses, and another 26,000 slow successful responses during 30 days.
+Copy this table under `## Alerts`. Both windows must exceed their threshold. The longer window detects sustained damage; the shorter confirms it continues.
 
-| Indicator | Allowed bad fraction | Allowed bad | Observed bad | Remaining |
+| Speed | Long + short window | Burn threshold | Error ratio | Action |
 | --- | --- | --- | --- | --- |
-| Success | 0.001 | 10,000 | 4,000 | 6,000 |
-| Fast success | 0.01 | 100,000 | 30,000 | 70,000 |
+| Fast | 1h + 5m | >14.4x | >1.44% | Page now |
+| Medium | 6h + 30m | >6x | >0.60% | Page now |
+| Slow | 3d + 6h | >1x | >0.10% | Ticket |
 
-Observed SLIs are 99.96% success and 99.7% fast success. Both pass. Recalculate allowances from actual traffic. A negative remaining budget means the objective was missed.
+These windows follow [Google's reliability guidance](https://sre.google/workbook/alerting-on-slos/). For example, `14.4 x 0.001 = 1.44%` errors spends 2% of the budget per hour at steady traffic. A page calls the on-call engineer; a ticket schedules work.
 
----
-
-## Step 4: Set Burn-Rate Thresholds
-
-![A sustained bad-request rate consumes the budget](images/step-4.png)
-
-Burn rate is the observed bad fraction divided by the allowed bad fraction. At 1x, a sustained rate uses a full budget in 30 days. At 10x, it uses one in three days, assuming steady traffic and an initially unused budget.
-
-Add these thresholds to an `Alerts` section. A page calls the on-call engineer; a ticket schedules investigation. Both windows in a row must exceed the threshold for the same SLI.
-
-| Action | Burn rate | Long window | Short window | Budget share in long window |
-| --- | --- | --- | --- | --- |
-| Page | 14.4x | 1 hour | 5 minutes | 2% |
-| Page | 6x | 6 hours | 30 minutes | 5% |
-| Ticket | 3x | 1 day | 2 hours | 10% |
-
-These pairs follow [Google's SRE alerting guidance](https://sre.google/workbook/alerting-on-slos/). Budget share equals burn rate times window hours divided by 720, assuming steady traffic. Use actual request counts to measure budget consumption when traffic varies.
+Add the response policy: investigate pages immediately; review tickets next working day. When the rolling budget is exhausted, pause nonessential releases and prioritize reliability fixes.
 
 ---
 
-## 5. Run the Following Queries in Prometheus
+## Step 4: Write the Fast-Burn Rule
 
-![Worked query results show budget use and fast burn](images/run-output.png)
+![Both error-ratio windows must exceed 1.44% for two minutes](images/alert-workflow.png)
 
-Calculate these values by hand in `slo.md`, or paste each expression into Prometheus. These expressions need no API metrics.
+Create `orders-api-rules.yml` beside your document. The counter `http_requests_total` counts requests; labels `job`, `code`, and `route` identify the service, response code, and path. Each label combination is a time series, a sequence of measurements. Start good-response counts at zero.
 
-```promql
-10000000 * (1 - 0.999)
+```yaml
+groups:
+  - name: orders-api-slo
+    rules:
+      - alert: OrdersAPIErrorBudgetBurnFast
+        expr: |
+          (
+            1 - sum(rate(http_requests_total{job="orders-api",code!~"5..|499",route!="/healthz"}[1h]))
+            / sum(rate(http_requests_total{job="orders-api",code!="499",route!="/healthz"}[1h]))
+            > 0.0144
+          )
+          and
+          (
+            1 - sum(rate(http_requests_total{job="orders-api",code!~"5..|499",route!="/healthz"}[5m]))
+            / sum(rate(http_requests_total{job="orders-api",code!="499",route!="/healthz"}[5m]))
+            > 0.0144
+          )
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "orders-api is burning its error budget fast"
 ```
-**Explanation:** Calculates the success budget of approximately 10,000 requests.
+**What this file does:** Calculates one minus the good-request fraction and checks both fast-burn windows.
 
-```promql
-4000 / 10000 * 100
+`rate()` estimates requests per second, handling counts that restart at zero. `for: 2m` requires two minutes of matching results. Missing measurements or no traffic means unknown health, not 100% availability.
+
+Reference this file as the fast-alert query sketch. Medium and slow rules are extension work using the table's settings. Adjust alerts for low traffic before production use.
+
+---
+
+## 5. Run the Following Commands in the Terminal
+
+![Promtool reports SUCCESS: 1 rules found for orders-api-rules.yml](images/run-output.png)
+
+In your practice folder, install the checker on Linux x86-64 if needed. Keep each command on one line.
+
+```bash
+# paste this as one line
+curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
 ```
-**Explanation:** Shows that the sample failures consumed 40% of the success budget.
+**Explanation:** Downloads the official Prometheus release into your practice folder.
 
-```promql
-0.02 / (1 - 0.999)
+```bash
+tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
 ```
-**Explanation:** Shows that a current 2% failure fraction burns the success budget at approximately 20x.
+**Explanation:** Extracts the downloaded tools.
 
-**What to expect:** Approximately `10000`, `40`, and `20`, allowing for rounding. A 20x burn triggers a fast page only when both windows exceed the threshold.
-
-For an instrumented API, add this fast-page query sketch to your document:
-
-```promql
-(
-  (1 - sum(rate(api_requests_total{job="catalogue-api",status="200"}[1h]))
-  / sum(rate(api_requests_total{job="catalogue-api"}[1h]))) / 0.001 > 14.4
-)
-and
-(
-  (1 - sum(rate(api_requests_total{job="catalogue-api",status="200"}[5m]))
-  / sum(rate(api_requests_total{job="catalogue-api"}[5m]))) / 0.001 > 14.4
-)
+```bash
+./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yml
 ```
-**Explanation:** Returns a result when both the one-hour and five-minute success burn rates exceed 14.4x.
+**Explanation:** Validates your rule without starting a server.
 
-For latency, use one minus the fast-success fraction and divide by `0.01`, with the same windows. Document the response policy: investigate pages immediately; when either monthly budget is exhausted, pause nonessential releases and prioritize reliability fixes. Low traffic requires separate alert tuning.
+If your terminal already recognizes `promtool`, use this instead:
+
+```bash
+promtool check rules orders-api-rules.yml
+```
+**Explanation:** Checks the same file using an existing installation.
+
+**What to expect:** `SUCCESS: 1 rules found`. This checks file structure, not live measurements or delivered alerts. Production also needs data collection and alert delivery; see the [Prometheus rule documentation](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/).
+
+Check your understanding: `0.02 / 0.001 = 20x` burn. A sustained 2% error ratio triggers the fast alert when both windows exceed 14.4x for two minutes.
 
 ## Verification Checklist
 
-![Check the contract, calculations, queries, and response policy](images/verification.png)
+![The checker reports that the alert rule is valid](images/run-output.png)
 
-- [ ] Eligible traffic, timeouts, and measurement boundaries are explicit.
-- [ ] Both SLIs have a target and a rolling 30-day window.
-- [ ] Remaining budgets are 6,000 and 70,000 requests.
-- [ ] A 2% failure fraction gives a 20x success burn rate.
-- [ ] Alert thresholds include both windows and an action.
-- [ ] `slo.md` includes queries and an exhausted-budget policy.
+- [ ] `slo-document.md` identifies the owner, valid requests, and bad outcomes.
+- [ ] The target uses rolling 30 days and budgets requests, not minutes.
+- [ ] The worked budget leaves 6,000 requests, with 40% consumed.
+- [ ] All three alert speeds have two windows and an action.
+- [ ] The rule excludes 499 and health checks from both counts.
+- [ ] `promtool check rules` succeeds.
 
 ## Conclusion
 
-![Use the SLO document to guide reliability decisions](images/conclusion.png)
+![Use both measurement windows to decide when to call the on-call engineer](images/alert-workflow.png)
 
-Your `slo.md` connects user outcomes to targets and actions. Next, judge whether failover restores service quickly enough.
+Your document connects API outcomes to budgets and alerts. Next, evaluate failover: switching traffic to healthy backups.
