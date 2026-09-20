@@ -1,47 +1,52 @@
 # SLOs and Error Budgets
 
-![Set a 99.9% target, allow a 0.1% error budget, and watch for fast burn](images/thumb.png)
+![SLOs and error budgets: set an SLO target, allow an error budget, and watch for fast burn](images/budget.png)
 
-An application programming interface (API) lets programs request data or actions. Define good service for an Orders API, calculate its failure allowance, and write a fast-burn alert.
+An API lets programs request data or actions. In this lab, you define good service for an Orders API, calculate its failure budget, and write a fast-burn alert rule.
 
 ## Objective
 
-![Set a target, calculate its error budget, and watch for fast burn](images/thumb.png)
-
 By the end of this lab, you can:
-- Define a service level indicator (SLI), a measurement of service quality.
-- Set a service level objective (SLO), a target for that measurement.
-- Calculate an error budget and choose burn-rate alerts.
+- Define SLIs and SLOs for a sample API (Orders API).
+- Derive its monthly error budget and failure allowance.
+- Configure multi-window budget burn-rate alert thresholds.
+- Validate Prometheus query sketches using `promtool`.
 
 ## Deliverable
 
-![Create an SLO document and its supporting alert rule in a practice folder](images/deliverable.png)
+![What you will create: slo-document.md and orders-api-rules.yml](images/what_you_create.png)
 
-Build `slo-document.md` and its supporting `orders-api-rules.yml` in a separate practice folder. All content is included below.
+An SLO document with budget burn-rate thresholds named `slo-document.md`, and a supporting Prometheus query sketch file named `orders-api-rules.yml`.
 
-You need a Markdown editor and `promtool`, the Prometheus rule checker. No server is required. Linux setup is below; other platforms use [Prometheus downloads](https://prometheus.io/download/).
+- **Tools and Stack:** Markdown, Prometheus query sketches (`promtool`).
 
-## SLI and SLO
+## Which Requests Count? (SLI and SLO)
 
-![Exclude cancellations and health checks before dividing good requests by valid requests](images/sli.png)
+![Which requests count: filter cancellations and health checks to separate good from bad requests](images/which_requests.png)
 
-An SLI measures results; an SLO sets the target. Our availability SLI counts requests without server errors. The gateway, the API's entry point, records each final HTTP status, a response code describing the outcome.
+An SLI measures service performance; an SLO sets the target percentage. For the Orders API, the gateway records each request and final HTTP code. Client cancellations (code 499) and health checks (`/healthz`) are filtered out first. From the remaining valid requests, responses with 2xx, 3xx, and 4xx count as good, while 5xx server errors count as bad.
 
-Here, 4xx responses count as good: the server handled an invalid request. Exclude cancelled requests, code 499, from both counts. This policy is specific to our API.
+## When Do We Alert? (Error Budgets and Burn Rate)
 
-## Error Budget and Burn Rate
+![When do we alert: multi-window burn rate thresholds and notification actions](images/burn_rate_alerting.png)
 
-![A 99.9% target permits 10,000 bad requests from ten million valid requests](images/budget.png)
+An error budget is the allowed bad fraction: `1 - SLO`. A 99.9% target over rolling 30 days permits 0.1% failures. Burn rate measures how fast your service spends this budget. A 1x burn rate drains the budget in 30 days; 14.4x exhausts it in two days. Both a short and long window must confirm the burn to prevent false pages from brief spikes.
 
-An error budget is the allowed bad fraction: `1 - SLO`. Multiply by valid requests to find the allowance. Monthly means rolling 30 days here.
+## Step 1: Write the SLI Specification
 
-Burn rate equals observed error ratio divided by allowed bad fraction. At steady traffic, a sustained 1x rate spends a fresh budget in 30 days; 14.4x spends it in 50 hours. A request-based SLI does not directly give downtime minutes.
+Create `slo-document.md` in your practice folder to document the service boundary and request filtering rules.
 
-## Step 1: Write the SLI
-
-![Requests pass through exclusions before classification as good or bad](images/sli.png)
-
-Create `slo-document.md` in your practice folder and add this contract.
+```text
+All Gateway Requests
+       │
+       ├── Code 499 (Client Cancel) ──> [ EXCLUDE ]
+       ├── Route /healthz           ──> [ EXCLUDE ]
+       │
+       ▼
+  Valid Requests
+       ├── 2xx, 3xx, 4xx            ──> [ GOOD ]
+       └── 5xx (Server Error)       ──> [ BAD ]
+```
 
 ```markdown
 # Orders API SLO
@@ -56,15 +61,24 @@ Create `slo-document.md` in your practice folder and add this contract.
 - Count each retry separately.
 - Use checks from outside the system for requests that never reach the gateway.
 ```
-**What this file does:** Defines the population and outcome used to measure availability.
+
+**What this file does:** Defines the request filters and classification rules used to measure API availability.
 
 ---
 
 ## Step 2: Calculate the Error Budget
 
-![Subtract 4,000 failures from the 10,000-request allowance to leave 6,000](images/budget.png)
+Append the error budget calculation to `slo-document.md` to establish your monthly failure allowance.
 
-Append this worked example. Use actual valid request counts when evaluating a real month.
+```text
+10,000,000 Valid Requests  x  0.1% Allowed Bad
+             │
+             ▼
+    10,000 Allowed Failures (Monthly Error Budget)
+             │
+             ├── 4,000 Observed Failures (40% Consumed)
+             └── 6,000 Remaining Failures (60% Remaining)
+```
 
 ```markdown
 ## SLO
@@ -75,7 +89,7 @@ Append this worked example. Use actual valid request counts when evaluating a re
 - Allowed bad requests: 10,000,000 x 0.001 = 10,000.
 
 | Measure | Calculation or value |
-| --- | --- |
+| :--- | :--- |
 | Valid requests | 10,000,000 |
 | Allowed failures | 10,000 |
 | Observed failures | 4,000 |
@@ -84,33 +98,53 @@ Append this worked example. Use actual valid request counts when evaluating a re
 
 - Observed SLI: 1 - 4,000 / 10,000,000 = 99.96%; target met.
 ```
-**What this file does:** Records a checkable target, budget, and measured outcome.
+
+**What this file does:** Records the 30-day availability target, allowed failure budget, and observed consumption.
 
 ---
 
 ## Step 3: Set the Burn-Rate Thresholds
 
-![Fast and medium burn page the on-call engineer; slow burn creates a ticket](images/burn-rate.png)
+Add the alerting policy to `slo-document.md` to define when engineers must be paged.
 
-Copy this table under `## Alerts`. Both windows must exceed their threshold. The longer window detects sustained damage; the shorter confirms it continues.
+```text
+                  1-Hour Window (>14.4x Burn)
+                              │
+                              ▼
+                     [ Sustained Damage? ]
+                              │
+                              ├── YES ──> Check 5-Minute Window (>14.4x Burn)
+                              │                     │
+                              │                     ▼
+                              │            [ Still Burning Now? ]
+                              │                     │
+                              │                     ├── YES ──> [ PAGE NOW ]
+                              │                     └── NO  ──> (Transient spike, suppress)
+                              │
+                              └── NO  ──> (Normal traffic, suppress)
+```
+
+```markdown
+## Alerts
 
 | Speed | Long + short window | Burn threshold | Error ratio | Action |
-| --- | --- | --- | --- | --- |
+| :--- | :--- | :--- | :--- | :--- |
 | Fast | 1h + 5m | >14.4x | >1.44% | Page now |
 | Medium | 6h + 30m | >6x | >0.60% | Page now |
-| Slow | 3d + 6h | >1x | >0.10% | Ticket |
+| Slow | 3d + 6h | >1x | >0.10% | Create ticket |
+```
 
-These windows follow [Google's reliability guidance](https://sre.google/workbook/alerting-on-slos/). For example, `14.4 x 0.001 = 1.44%` errors spends 2% of the budget per hour at steady traffic. A page calls the on-call engineer; a ticket schedules work.
+**What this file does:** Sets the dual-window thresholds and team actions for fast, medium, and slow budget burn.
 
-Add the response policy: investigate pages immediately; review tickets next working day. When the rolling budget is exhausted, pause nonessential releases and prioritize reliability fixes.
+These windows follow Google SRE reliability practices. A 14.4x burn rate consumes 2% of the budget in one hour. Investigate pages immediately, and review slow-burn tickets on the next business day. When the budget is exhausted, halt new features and focus on reliability fixes.
 
 ---
 
-## Step 4: Write the Fast-Burn Rule
+## Step 4: Write the Fast-Burn Alert Rule
 
-![Both error-ratio windows must exceed 1.44% for two minutes](images/alert-workflow.png)
+Create `orders-api-rules.yml` in your practice folder to implement the fast-burn alert rule.
 
-Create `orders-api-rules.yml` beside your document. The counter `http_requests_total` counts requests; labels `job`, `code`, and `route` identify the service, response code, and path. Each label combination is a time series, a sequence of measurements. Start good-response counts at zero.
+![Fast alert: both 1-hour and 5-minute error rates must exceed 1.44% for two minutes](images/fast_alert.png)
 
 ```yaml
 groups:
@@ -135,60 +169,49 @@ groups:
         annotations:
           summary: "orders-api is burning its error budget fast"
 ```
-**What this file does:** Calculates one minus the good-request fraction and checks both fast-burn windows.
 
-`rate()` estimates requests per second, handling counts that restart at zero. `for: 2m` requires two minutes of matching results. Missing measurements or no traffic means unknown health, not 100% availability.
+**What this file does:** Checks both the 1-hour and 5-minute error rates simultaneously and triggers an immediate page if both exceed 1.44% for two minutes.
 
-Reference this file as the fast-alert query sketch. Medium and slow rules are extension work using the table's settings. Adjust alerts for low traffic before production use.
+`rate()` handles counter resets, and `for: 2m` requires the condition to hold for two minutes.
 
 ---
 
-## 5. Run the Following Commands in the Terminal
+## 5. Run the following commands in the terminal
 
-![Promtool reports SUCCESS: 1 rules found for orders-api-rules.yml](images/run-output.png)
-
-In your practice folder, install the checker on Linux x86-64 if needed. Keep each command on one line.
+Download Prometheus to extract `promtool` and validate your alert rules.
 
 ```bash
 # paste this as one line
 curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
 ```
-**Explanation:** Downloads the official Prometheus release into your practice folder.
+
+**Explanation:** Downloads the official Prometheus archive containing `promtool`.
 
 ```bash
 tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
 ```
-**Explanation:** Extracts the downloaded tools.
+
+**Explanation:** Extracts the Prometheus binaries to your practice folder.
 
 ```bash
 ./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yml
 ```
-**Explanation:** Validates your rule without starting a server.
 
-If your terminal already recognizes `promtool`, use this instead:
+**Explanation:** Validates your rule syntax and PromQL queries without starting a server. If `promtool` is already installed on your system, you can run `promtool check rules orders-api-rules.yml` directly.
 
-```bash
-promtool check rules orders-api-rules.yml
-```
-**Explanation:** Checks the same file using an existing installation.
+![Check your rule file: promtool check rules outputs SUCCESS](images/run-output.png)
 
-**What to expect:** `SUCCESS: 1 rules found`. This checks file structure, not live measurements or delivered alerts. Production also needs data collection and alert delivery; see the [Prometheus rule documentation](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/).
+**What to expect:** The output prints `SUCCESS: 1 rules found` as shown in the screenshot. This confirms your YAML formatting and PromQL syntax are completely valid.
 
-Check your understanding: `0.02 / 0.001 = 20x` burn. A sustained 2% error ratio triggers the fast alert when both windows exceed 14.4x for two minutes.
+## Verification checklist
 
-## Verification Checklist
-
-![The checker reports that the alert rule is valid](images/run-output.png)
-
-- [ ] `slo-document.md` identifies the owner, valid requests, and bad outcomes.
-- [ ] The target uses rolling 30 days and budgets requests, not minutes.
-- [ ] The worked budget leaves 6,000 requests, with 40% consumed.
-- [ ] All three alert speeds have two windows and an action.
-- [ ] The rule excludes 499 and health checks from both counts.
-- [ ] `promtool check rules` succeeds.
+- [ ] `slo-document.md` defines service ownership, valid requests, and error classifications.
+- [ ] The availability objective targets 99.9% over a rolling 30-day window.
+- [ ] The error budget calculation leaves 6,000 allowed failures after 40% consumption.
+- [ ] The alert policy defines dual windows for fast, medium, and slow burn rates.
+- [ ] `orders-api-rules.yml` excludes client cancels (499) and health checks (`/healthz`).
+- [ ] `promtool check rules orders-api-rules.yml` returns `SUCCESS: 1 rules found`.
 
 ## Conclusion
 
-![Use both measurement windows to decide when to call the on-call engineer](images/alert-workflow.png)
-
-Your document connects API outcomes to budgets and alerts. Next, evaluate failover: switching traffic to healthy backups.
+You created a production-ready reliability contract for an Orders API. You connected a raw request SLI to an error budget and configured multi-window alerts to detect real service degradations. Next, examine how load balancing and automated failover switch traffic to healthy backup nodes.
