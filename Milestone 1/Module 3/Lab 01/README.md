@@ -394,14 +394,6 @@ python3 availability.py --csv components.csv --target 99.95
 
 ---
 
-## Verification checklist
-
-- [ ] `python3 availability.py --demo` runs and prints sample comparisons.
-- [ ] Serial availability (99.8001%) computes lower than a single 3-nines component (99.9%).
-- [ ] Parallel availability (99.9999%) computes higher than a single 3-nines component (99.9%).
-- [ ] `python3 availability.py --csv components.csv` reads all groups and outputs total system availability.
-- [ ] Adding `--target 99.95` recommends duplicating `lb` and `cache` to meet the SLA.
-
 ## Conclusion
 
 You built a working calculator that turns system design percentages into real minutes of downtime. You learned why serial chains lower uptime, how parallel redundancy prevents outages, and how to identify the weakest link in an architecture. In the next lab, you will use these formulas to design systems that handle automated failover and zero-downtime deployments.
