@@ -1,6 +1,6 @@
 # Availability Math
 
-![Availability Workflow: Users connect to Load Balancer, Switch, and Application Servers to keep the service up](images/availability-workflow.png)
+![Availability Workflow: Users connect to Load Balancer, Switch, and Application Servers to keep the service up](images/availability.png)
 
 In system design, engineers often measure reliability in "nines": 99.9%, 99.99%, or 99.999%. In this lab, you build a Python calculator that converts these numbers into real minutes of downtime. You will see how connecting servers in a line lowers uptime, how adding backup servers improves uptime, and how to identify which server you should duplicate first.
 
@@ -15,7 +15,10 @@ By the end of this lab, you can:
 
 ## Deliverable
 
-A Python script named `availability.py` and a configuration file named `components.csv`. Together, they calculate overall system uptime, print monthly and yearly downtime in minutes and hours, and recommend which component to duplicate to meet an SLA target.
+- Create `availability.py` and a configuration file named `components.csv`.
+- Calculate overall system uptime.
+- Print monthly and yearly downtime in minutes and hours.
+- Recommend which component to duplicate to meet an SLA target.
 
 ## What is Availability?
 
