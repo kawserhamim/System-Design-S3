@@ -1,4 +1,4 @@
-# SLOs and Error Budgets
+# SLO & Error Budget Definition
 
 ![SLOs and error budgets: set an SLO target, allow an error budget, and watch for fast burn](images/budget.png)
 
@@ -6,17 +6,17 @@ An application programming interface (API) lets programs request data. Define an
 
 ## Objective
 
-By the end of this lab, you can:
-- Define SLIs and SLOs for a sample API (Orders API).
-- Derive its monthly error budget and failure allowance.
-- Configure multi-window budget burn-rate alert thresholds.
-- Validate Prometheus query sketches using `promtool`.
+Define service level indicators (SLIs) and service level objectives (SLOs) for a sample API, then derive its monthly error budget. This lab uses the Orders API and a rolling 30-day month.
+
+## Tools/Stack
+
+- Markdown for the SLO document.
+- Prometheus query sketches for budget burn-rate alerts.
+- `promtool` for the optional syntax check in Step 5.
 
 ## Deliverable
 
-`slo-document.md` with error budgets and alert thresholds, plus `orders-api-rules.yml` with a Prometheus query sketch.
-
-- **Tools and Stack:** Markdown, Prometheus query sketches (`promtool`).
+An SLO document, `slo-document.md`, with the API's request rules, availability target, monthly error budget, and budget burn-rate thresholds. A supporting file, `orders-api-rules.yml`, shows the fast-burn threshold as a Prometheus query sketch.
 
 ## Which Requests Count? (SLI and SLO)
 
@@ -127,7 +127,7 @@ Fast-alert threshold: `14.4 x 0.1% = 1.44%`. Review tickets the next business da
 
 Create `orders-api-rules.yml` in your practice folder. Prometheus monitors metrics, and its query language, PromQL, calculates error rates from request counts.
 
-![Fast alert: both 1-hour and 5-minute error rates must exceed 1.44% for two minutes](images/fast-alert.png)
+![Fast alert: both 1-hour and 5-minute error rates exceed 1.44% at the same evaluation](images/fast-alert-no-delay.png)
 
 ```yaml
 groups:
@@ -146,22 +146,23 @@ groups:
             / sum(rate(http_requests_total{job="orders-api",code!="499",route!="/healthz"}[5m]))
             > 0.0144
           )
-        for: 2m
         labels:
           severity: page
         annotations:
           summary: "orders-api is burning its error budget fast"
 ```
 
-**What this file does:** Defines an alert that fires after both error rates stay above 1.44% for two minutes.
+**What this file does:** Defines an alert that fires at the first rule evaluation where both error rates exceed 1.44%.
 
-`rate()` handles counter resets, and `for: 2m` requires the condition to hold for two minutes.
+`rate()` handles counter resets. The 5-minute lookback smooths recent measurements and confirms that errors are still occurring. This rule omits `for` to avoid an extra pending period after both thresholds are crossed.
+
+A lookback window is not a fixed waiting period: a large spike can cross both thresholds before five minutes have passed. Detection time depends on traffic, the error rate, and scrape and rule evaluation intervals. Notification delivery can add further delay. See the [Prometheus alerting rules documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
 
 ---
 
 ## 5. Run the following commands in the terminal
 
-On Linux with an x86-64 processor, download Prometheus and use its `promtool` checker to validate the rule file.
+This optional step checks the supporting query sketch. On Linux with an x86-64 processor, download Prometheus and use its `promtool` checker to validate the rule file.
 
 ```bash
 # paste this as one line
