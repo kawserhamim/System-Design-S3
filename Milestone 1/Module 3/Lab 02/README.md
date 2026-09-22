@@ -188,15 +188,6 @@ tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
 
 ---
 
-## Verification checklist
-
-- [ ] `slo-document.md` defines service ownership, valid requests, and error classifications.
-- [ ] The availability objective targets 99.9% over a rolling 30-day window.
-- [ ] The error budget calculation leaves 6,000 allowed failures after 40% consumption.
-- [ ] The alert policy defines dual windows for fast, medium, and slow burn rates.
-- [ ] `orders-api-rules.yml` excludes client cancels (499) and health checks (`/healthz`).
-- [ ] `promtool check rules orders-api-rules.yml` returns `SUCCESS: 1 rules found`.
-
 ## Conclusion
 
 You documented the Orders API target, calculated its error budget, and checked a fast-burn alert rule. Next, explore load balancing and automated failover.

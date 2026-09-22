@@ -7,6 +7,7 @@ In system design, engineers often measure reliability in "nines": 99.9%, 99.99%,
 ## Objective
 
 By the end of this lab, you can:
+
 - Convert "nines" and SLA percentages into decimal numbers for math calculations.
 - Calculate total availability for servers connected in a single line (serial).
 - Calculate total availability for redundant backup servers (parallel).
@@ -20,6 +21,10 @@ By the end of this lab, you can:
 - Print monthly and yearly downtime in minutes and hours.
 - Recommend which component to duplicate to meet an SLA target.
 
+## Before You Start
+
+You need Python 3 and a terminal. The calculator uses only the Python standard library. Build `availability.py` by adding the code blocks in Steps 2–5 in order, then run it in Step 6.
+
 ## What is Availability?
 
 Availability is the percentage of time a system remains operational and reachable to process user requests over a given time window. It measures overall service health under normal traffic as well as unexpected failures.
@@ -28,6 +33,7 @@ The standard formula for availability is:
 
 ```text
 Availability = Total Uptime / (Total Uptime + Total Downtime)
+Availability Percentage = Availability * 100
 ```
 
 For example, if a service runs across a 30-day month (43,200 minutes) and suffers 43.2 minutes of total downtime, its availability is 99.9%. Even small fractional drops in availability can mean hours of service disruption and significant business loss.
@@ -43,7 +49,9 @@ Engineers and cloud providers express service level agreements (SLAs) using "nin
 | 4 nines | 99.99% | 4.32 min | 52.56 min |
 | 5 nines | 99.999% | 0.43 min (26 seconds) | 5.26 min |
 
-Moving from 3 nines to 4 nines reduces yearly downtime from almost 9 hours to under an hour. Reaching 5 nines allows only 5 minutes of total downtime per year, which requires automated health checks and instant failover.
+The table uses a 30-day month and a 365-day year, matching the calculator below.
+
+Moving from 3 nines to 4 nines reduces yearly downtime from almost 9 hours to under an hour. Reaching 5 nines allows only 5 minutes of total downtime per year, which leaves very little room for failure detection, recovery, and maintenance.
 
 ## Serial Architecture
 
@@ -51,24 +59,24 @@ Moving from 3 nines to 4 nines reduces yearly downtime from almost 9 hours to un
 
 In a serial system, requests travel through components one after another in a single line. Every component in the path must work for the request to succeed. If the load balancer fails, the application server never gets the traffic.
 
-Availability multiplies across each component in the line:
+Assuming independent component failures, availability multiplies across each component in the line. Here, `A` represents availability as a decimal between 0 and 1:
 
 ```text
 A_system = A_1 * A_2 * ... * A_n
 ```
 
-Because each availability number is less than 1, a serial chain is always less reliable than its single weakest component. Adding more components in a line always reduces total uptime.
+A serial chain cannot be more available than its least available component. Under this model, adding another required component with availability below 100% reduces overall availability.
 
 ## Parallel Architecture
 
 ![Parallel Architecture: Users connect to Load Balancer, Switch, and Parallel Application Servers. Service stays up even if one server fails](images/parallel.png)
 
-In a parallel system, backup copies run side by side. The service stays online as long as at least one copy is healthy. 
+In a parallel system, backup copies run side by side. The parallel group stays available as long as at least one copy is healthy, reachable, and able to handle the traffic.
 
-Total availability is one minus the probability that all copies fail at the exact same time:
+The group’s availability is one minus the probability that all copies are unavailable at the same time:
 
 ```text
-A_system = 1 - (1 - A_1) * (1 - A_2) * ... * (1 - A_n)
+A_group = 1 - (1 - A_1) * (1 - A_2) * ... * (1 - A_n)
 ```
 
 This formula assumes that redundant copies fail independently. If two servers share the same power supply or network switch, a single hardware fault can take down both. Keep failure independence in mind when building real architectures.
@@ -79,11 +87,32 @@ Comparing serial and parallel designs shows why modern production systems combin
 
 | Architecture | Formula | What Happens | Example |
 | :--- | :--- | :--- | :--- |
-| Serial (In a line) | `A1 * A2 * ... * An` | Always worse than weakest part | Two 99.9% servers yield 99.80% |
+| Serial (In a line) | `A1 * A2 * ... * An` | Limited by the weakest component | Two 99.9% servers yield 99.80% |
 | Parallel (Side by side) | `1 - (1-A1) * (1-A2)` | Backup copies improve uptime | Two 99.9% servers yield 99.9999% |
-| Combined System | Serial line of backup groups | Redundancy removes bottlenecks | `LB -> (API \|\| API) -> DB` |
+| Combined System | Serial line of backup groups | Redundancy improves individual tiers | `LB -> (API \|\| API) -> DB` |
 
 A real production architecture connects distinct tiers in series, but runs multiple redundant copies in parallel inside each critical tier.
+
+## Combined Architecture: Serial Tiers with Parallel Servers
+
+![Combined architecture: a load balancer routes requests to three parallel servers, followed by a shared cache and database. Server 3 is down, while Servers 1 and 2 remain available](images/combine.png)
+
+The diagram combines both availability models. Requests pass through the load balancer, one healthy application server, the cache, and the database. These tiers form a serial chain, while the three application servers form a parallel group within that chain.
+
+Server 3 is down, but Servers 1 and 2 can still handle requests. The load balancer must detect the failed server and route traffic to healthy servers. This keeps the application tier available as long as at least one server works and has enough capacity to handle the traffic.
+
+Calculate the availability of the parallel server group first, then multiply it by the availability of the required serial tiers:
+
+```text
+A_servers = 1 - (1 - A_server1) * (1 - A_server2) * (1 - A_server3)
+A_system = A_load_balancer * A_servers * A_cache * A_database
+```
+
+For example, if each application server has 99.9% availability, the server group has an estimated availability of `1 - 0.001^3 = 99.9999999%`. This calculation describes availability over time; the red server in the diagram illustrates one possible failure at a particular moment.
+
+The load balancer, cache, and database are still single points of failure in this design. Even with healthy application servers, failure of any required serial tier makes the service unavailable. Adding application servers improves only the application tier; improving overall availability also requires addressing the other tiers.
+
+These formulas assume independent failures and successful routing to a healthy server. This lab treats the cache as a required dependency. If an application can bypass a failed cache and query the database directly, its availability model must account for that fallback path. The CSV example below uses two application servers instead of the three shown here, but applies the same calculation method.
 
 ---
 
@@ -198,13 +227,15 @@ def parallel(*probs: float) -> float:
 
 ---
 
-## Step 5: Add calculator input
+## Step 5: Connect the System Model and Reporting
 
-Now add the calculator input mechanisms. You will define a CSV file to describe your system tiers and add command-line input handling in Python.
+Now connect the formulas to a system definition. First, describe the tiers in a CSV file. Then add output formatting, file loading, redundancy suggestions, and command-line handling.
 
 ```text
-CLI Flags / CSV Input ---> load_groups() ---> Tier Evaluation ---> System Availability Report
+CSV File ---> load_groups() ---> Parallel Groups ---> Serial System ---> Report
 ```
+
+### Define the system tiers
 
 Open `components.csv` and add your system definition:
 
@@ -219,7 +250,13 @@ Cache,3,cache
 
 **What this file does:** Defines the infrastructure components, their individual uptime nines, and their redundancy groups.
 
-Next, append the reporting helpers, CSV parser, suggestion engine, and CLI entry point to `availability.py`:
+Rows with the same `group` value are parallel copies of one tier. Different groups are required serial dependencies. Here, the two `api` servers form a parallel group; `lb`, `cache`, and `db` each contain one component. Row order does not affect the availability calculation.
+
+### Add reporting and command-line handling
+
+The code below evaluates each group, combines the groups in series, and estimates downtime. To suggest improvements, it repeatedly adds a copy to the tier that gives the largest availability increase. It does not model infrastructure costs or guarantee the cheapest deployment.
+
+Append the reporting helpers, CSV parser, suggestion engine, and CLI entry point to `availability.py`:
 
 ```python
 def fmt_downtime(minutes: float, per: str) -> str:
@@ -327,14 +364,14 @@ def suggest_for_target(groups: dict, target_percent: float,
             break
 
     final = system_availability(work)
-    print("\nCheapest plan found:")
+    print("\nSuggested redundancy plan:")
     if final >= target:
         for i, name in enumerate(plan, 1):
             print(f"  {i}. add one copy of '{name}'")
         print(f"  -> {final * 100:.6f}%  TARGET MET")
     else:
-        print(f"  {max_adds} extra copies only reach {final * 100:.6f}%.")
-        print("  Weakest tier needs a better machine, not just more duplicates.")
+        print(f"  {len(plan)} extra copies reach {final * 100:.6f}%.")
+        print("  Target not reached within this search; review the tiers and copy limit.")
     print()
 
 
@@ -366,7 +403,7 @@ if __name__ == "__main__":
     main()
 ```
 
-**What this file does:** Reads CSV tier inputs, handles CLI arguments, formats downtime reports, and calculates the optimal redundancy plan.
+**What this file does:** Reads CSV tier inputs, handles CLI arguments, formats downtime reports, and suggests a redundancy plan for the requested target.
 
 ---
 
@@ -390,10 +427,10 @@ python3 availability.py --csv components.csv --target 99.95
 
 ![Availability Calculation Results: terminal output showing availability percentage, nines, and downtime for all topologies](images/availability-calculation-result.png)
 
-**What to expect:** The demo prints availability percentages, nines, and downtime for single, serial, parallel, and combined topologies. For `components.csv`, it shows an overall availability of 99.790020% (about 18.4 hours of downtime per year) and suggests adding one backup copy of `lb` and one of `cache` to reach the 99.95% target.
+**What to expect:** The demo uses a smaller system with a load balancer, two API servers, and a database; it omits the cache. It prints availability percentages, nines, and downtime for single, serial, parallel, and combined topologies. For `components.csv`, it shows an overall availability of 99.790020% (about 18.4 hours of downtime per year) and suggests adding one backup copy of `lb` and one of `cache` to reach the 99.95% target.
 
 ---
 
 ## Conclusion
 
-You built a working calculator that turns system design percentages into real minutes of downtime. You learned why serial chains lower uptime, how parallel redundancy prevents outages, and how to identify the weakest link in an architecture. In the next lab, you will use these formulas to design systems that handle automated failover and zero-downtime deployments.
+You built a working calculator that turns system design percentages into real minutes of downtime. You learned why serial chains lower uptime, how parallel redundancy prevents outages, and how to identify the weakest link in an architecture. In the next lab, you will define service level objectives (SLOs), calculate error budgets, and set alerts for excessive budget consumption.
