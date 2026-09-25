@@ -102,6 +102,8 @@ tiers:
 
 **What this file does:** It lists every required tier in order, and gives each tier its availability as a percent. Every tier has one copy for now.
 
+For this exercise, assume the Database is a managed multi-AZ service with 99.99% availability. This is a practice assumption, not a provider guarantee. Its internal redundancy is already included in that value, so represent it as one logical copy in the model.
+
 ---
 
 ## Step 2: Calculate availability by hand
@@ -158,7 +160,7 @@ predicted_failed_requests ≈ (112.22 / 43200) x 1,000,000 ≈ 2,598
 
 **Explanation:** About 2,598 failures fit within the 99.5% budget but exceed the 99.9% budget.
 
-These are estimates. Use real request counts to check whether a live service meets its target. If the number of requests changes, calculate the budget again.
+**Traffic caveat:** The 2,598 estimate assumes a uniform request rate. The same downtime during peak traffic can cause more failures; during quiet periods it can cause fewer. Equivalent downtime alone does not establish a request-based SLO result. Use real request counts to check whether a live service meets its target. If the number of requests changes, calculate the budget again.
 
 ---
 
@@ -186,14 +188,35 @@ import math
 import yaml
 
 
+def required(mapping, key, location):
+    if not isinstance(mapping, dict):
+        raise ValueError(f"{location} must be a YAML mapping")
+    if key not in mapping:
+        raise ValueError(f"{location}: missing required key '{key}'")
+    return mapping[key]
+
+
+def number(value, location, upper=None):
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value) or value <= 0
+            or (upper is not None and value > upper)):
+        bounds = f"above 0 and at most {upper}" if upper is not None else "above 0"
+        raise ValueError(f"{location} must be a finite number {bounds}, got {value!r}")
+    return value
+
+
+def nonempty_list(value, location):
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{location} must be a non-empty list")
+    return value
+
+
 def parallel_availability(copies):
-    if not copies:
-        raise ValueError("A tier must have at least one copy")
+    nonempty_list(copies, "copies")
     unavailability = 1.0
     for copy in copies:
-        percent = copy["availability_percent"]
-        if not (0 < percent <= 100):
-            raise ValueError(f"availability_percent must be between 0 and 100, got {percent}")
+        percent = number(required(copy, "availability_percent", "copy"),
+                         "availability_percent", upper=100)
         a = percent / 100
         unavailability *= (1 - a)
     return 1 - unavailability
@@ -209,8 +232,27 @@ def serial_availability(tier_availabilities):
 def load_topology(path):
     with open(path) as f:
         data = yaml.safe_load(f)
-    if not data.get("tiers"):
-        raise ValueError("topology must have at least one tier")
+    for key in ("service", "window_days", "monthly_valid_requests",
+                "slo_targets_percent", "tiers"):
+        required(data, key, "topology")
+    if not isinstance(data["service"], str) or not data["service"].strip():
+        raise ValueError("service must be a non-empty string")
+    number(data["window_days"], "window_days")
+    requests = number(data["monthly_valid_requests"], "monthly_valid_requests")
+    if not isinstance(requests, int):
+        raise ValueError("monthly_valid_requests must be a positive integer")
+    for slo in nonempty_list(data["slo_targets_percent"], "slo_targets_percent"):
+        number(slo, "slo_targets_percent entry", upper=100)
+    for index, tier in enumerate(nonempty_list(data["tiers"], "tiers")):
+        location = f"tiers[{index}]"
+        name = required(tier, "name", location)
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"{location}.name must be a non-empty string")
+        copies = nonempty_list(required(tier, "copies", location), f"{location}.copies")
+        for copy_index, copy in enumerate(copies):
+            copy_location = f"{location}.copies[{copy_index}]"
+            number(required(copy, "availability_percent", copy_location),
+                   f"{copy_location}.availability_percent", upper=100)
     return data
 
 
@@ -252,12 +294,18 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (OSError, yaml.YAMLError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
 ```
 
 **What this file does:** It checks your calculations and prints MODEL PASS or MODEL FAIL for each target.
 
-The script accepts availability above 0% and up to 100%. MODEL PASS means the calculation meets the target; you still need measurements from a live service.
+The script checks required keys, list structure, and numeric ranges before calculating. Missing files, invalid YAML, and invalid values produce an `Error:` message and a nonzero exit status. For example, a typo in `monthly_valid_requests` produces `Error: topology: missing required key 'monthly_valid_requests'`. Fix the named field and run again.
+
+The script accepts availability and SLO targets above 0% and up to 100%, a positive window length, and a positive integer request count. MODEL PASS means the calculation meets the target; you still need measurements from a live service.
 
 ---
 
