@@ -2,7 +2,7 @@
 
 ![URL shortener reliability baseline](images/thumb.png)
 
-Combine Labs 01, 02, and 03 into one reliability reference. Use it to check changes in later milestones.
+Combine Labs 01, 02, and 03 into a reliability reference for later milestones.
 
 ## Objective
 
@@ -10,7 +10,7 @@ Combine Labs 01, 02, and 03 into one reliability reference. Use it to check chan
 Model -> Calculate -> Set targets
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Connect the model to a measurable reliability target.
 
 By the end, you can:
 
@@ -24,7 +24,7 @@ By the end, you can:
 L1 calculator + L2 SLO + L3 topology -> reliability-baseline.md
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Combine the earlier results into one reference document.
 
 Create `reliability-baseline.md` using Markdown and Python 3. Keep the calculator beside it. AI tools may help; verify their output.
 
@@ -38,7 +38,7 @@ Every modeled request needs Gateway, Shortener Service, Cache, and Database. The
 
 ![Two copies each of Shortener Service and Cache](images/improved-topology.png)
 
-Either copy must serve all requests alone, and traffic must reach a working copy. Assume independent failures, no retries, no switching delay, and no shared failures. Database is one logical managed multi-AZ service; its assumed 99.99% already includes internal redundancy.
+Replicas are interchangeable copies, not shards holding different data. Either Cache copy must hold the required data. Either copy of each replicated tier must handle the full load alone, and traffic must reach a working copy. Assume independent failures, no retries, no switching delay, and no shared failures. Database is one logical managed multi-AZ service; its assumed 99.99% already includes internal redundancy.
 
 ## Step 1: Write the assumptions
 
@@ -46,7 +46,7 @@ Either copy must serve all requests alone, and traffic must reach a working copy
 Components + request rules + traffic -> model inputs
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Define the inputs before calculating availability.
 
 Create `reliability-baseline.md` with these planning inputs. Values are practice assumptions, not measurements or provider guarantees.
 
@@ -57,7 +57,7 @@ Create `reliability-baseline.md` with these planning inputs. Values are practice
 | Cache | 99.95% | 1 | 2 |
 | Database | 99.99% | 1 logical | 1 logical |
 
-Use a rolling 30-day window: 43,200 minutes and 5,000,000 assumed valid requests. 
+Use a rolling 30-day window: 43,200 minutes and 5,000,000 assumed valid requests.
 
 Carry forward Lab 02: exclude 499 responses and `/healthz`. Count remaining completed 2xx/3xx/4xx as good and 5xx as bad. Count retries separately. The service level indicator (SLI) is `good / valid`; use external checks for failures that never reach the gateway.
 
@@ -69,9 +69,11 @@ Carry forward Lab 02: exclude 499 responses and `/healthz`. Count remaining comp
 Copies -> tier availability -> composite availability
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Calculate each tier first, then multiply the required tiers.
 
 Create `reliability_baseline_calc.py`. Multiply required tiers; parallel copies fail only when both fail.
+
+Equivalent nines express closeness to 100%: 99% is two nines; 99.9% is three. Use `-log10(1 - availability)`, using decimal availability.
 
 ```python
 import math
@@ -143,7 +145,7 @@ if __name__ == "__main__":
 Composite availability -> compare target -> record decision
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Check whether the design supports the chosen target.
 
 Keep Lab 02's 99.9% target conditional on deploying both replicated tiers. Add 99.95% as a new stretch target.
 
@@ -164,7 +166,7 @@ Gateway's 99.95% caps the chain. Reaching 99.95% requires improving or bypassing
 Bad / valid requests -> burn rate -> paired windows -> alert
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Check both alert windows before triggering the action.
 
 Burn rate means `observed bad fraction / allowed bad fraction`. Keep Lab 02's paired windows: both must exceed the threshold.
 
@@ -184,7 +186,7 @@ These are lookback windows, not waiting periods. With steady traffic, 14.4x for 
 Calculator -> terminal results -> baseline document
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Use the output to verify your documented results.
 
 Run from the folder containing your calculator.
 
@@ -206,9 +208,9 @@ python3 reliability_baseline_calc.py
 Inputs + results + policy + reflection -> reliability baseline
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Record the evidence behind your reliability decision.
 
-Organize `reliability-baseline.md` into scope, assumptions, topology results, SLO decision, budgets, alerts, future requirements, and reflection. Record the calculator command so others can reproduce the results.
+Organize `reliability-baseline.md` into scope, assumptions, topology results, SLO decision, budgets, alerts, future requirements, and reflection. Include the calculator command.
 
 Require later milestones to preserve the replica assumptions and recalculate after dependency changes. Track Gateway and Database as required dependencies. Record the date and reason for revisions. Compare production SLIs with this model.
 
@@ -216,26 +218,12 @@ Write a 3-5-line reflection: Which component assumption most affected availabili
 
 ---
 
-## Verification checklist
-
-```text
-Recalculate -> compare -> submit
-```
-
-**Explanation:** Shows the workflow.
-
-- [ ] Both designs match the calculator's rounded results.
-- [ ] The selected SLO has a matching request budget.
-- [ ] All three alerts include both windows and actions.
-- [ ] Assumptions and future requirements are explicit.
-- [ ] The reflection answers both questions in 3-5 lines.
-
 ## Conclusion
 
 ```text
 Reliability baseline -> later milestone reviews
 ```
 
-**Explanation:** Shows the workflow.
+**Explanation:** Recheck the baseline when later milestones change the service.
 
-Use this baseline to review architecture changes in later milestones. Compare its predictions with measured request reliability as the service develops.
+Review later architecture changes against this baseline. Compare predictions with measured request reliability.
