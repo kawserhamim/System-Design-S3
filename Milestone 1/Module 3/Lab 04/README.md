@@ -1,6 +1,6 @@
 # Reliability Baseline for a URL Shortener
 
-![URL shortener reliability baseline](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2004/images/thumb.png)
+![URL shortener reliability baseline](images/thumb.png)
 
 Combine Labs 01, 02, and 03 into one reliability reference. Use it to check changes in later milestones.
 
@@ -30,13 +30,13 @@ Create `reliability-baseline.md` using Markdown and Python 3. Keep the calculato
 
 ## Required dependencies
 
-![Four required tiers in series](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2004/images/baseline-topology.png)
+![Four required tiers in series](images/baseline-topology.png)
 
 Every modeled request needs Gateway, Shortener Service, Cache, and Database. The client is excluded. Real cache hits may skip Database; this simplified chain is not a worst-case guarantee.
 
 ## Parallel copies
 
-![Two copies each of Shortener Service and Cache](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2004/images/improved-topology.png)
+![Two copies each of Shortener Service and Cache](images/improved-topology.png)
 
 Either copy must serve all requests alone, and traffic must reach a working copy. Assume independent failures, no retries, no switching delay, and no shared failures. Database is one logical managed multi-AZ service; its assumed 99.99% already includes internal redundancy.
 
@@ -194,7 +194,7 @@ python3 reliability_baseline_calc.py
 
 **Explanation:** Prints modeled results and compares them with both targets.
 
-![Verified Python calculator output](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2004/images/run-output.png)
+![Verified Python calculator output](images/run-output.png)
 
 **What to expect:** Baseline: 99.7901%, 2.678 nines, 90.66 minutes. Improved: 99.9399%, 3.221 nines, 25.97 minutes. Only the improved design passes 99.9%. Predicted failures are 10,493 and 3,006 under uniform traffic. These estimates are not measured SLO results.
 
