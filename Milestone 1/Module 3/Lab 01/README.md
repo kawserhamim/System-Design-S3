@@ -1,6 +1,6 @@
 # Availability Math
 
-![Availability lab: design a topology, calculate availability, and compare uptime and downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability.png)
+![Availability lab: design a topology, calculate availability, and compare uptime and downtime](./images/availability.png)
 
 Build a calculator that shows how component reliability affects a whole system. Compare required components in a serial chain with backup copies in a parallel group, then estimate downtime.
 
@@ -58,19 +58,19 @@ Each extra nine reduces expected downtime tenfold. The calculator uses a 30-day 
 
 ## Serial Architecture
 
-![Serial dependencies: the app is down and cannot connect to the database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial.png)
+![Serial dependencies: the app is down and cannot connect to the database](./images/serial.png)
 
 Every required component must work. The diagram shows an app failure breaking the request path to the database. For independent failures, multiply component availability: `A_system = A_1 * A_2`. Adding a required component below 100% availability lowers the total.
 
 ## Parallel Architecture
 
-![Parallel app replicas: App 1 is up, App 2 is down, and both share a load balancer](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/parallel.png)
+![Parallel app replicas: App 1 is up, App 2 is down, and both share a load balancer](./images/parallel.png)
 
 A replica is another copy of a component. App 1 can serve requests when App 2 fails, assuming successful routing and enough capacity. For independent failures, `A_group = 1 - (1 - A_1) * (1 - A_2)`. This covers the app group only; the shared load balancer remains a required dependency.
 
 ## Compare the Designs
 
-![Comparison of single, serial, and parallel components with 99.9% availability each](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-comparision.png)
+![Comparison of single, serial, and parallel components with 99.9% availability each](./images/availability-comparision.png)
 
 The parallel result excludes shared dependencies and assumes one copy can handle all traffic.
 
@@ -82,7 +82,7 @@ The parallel result excludes shared dependencies and assumes one copy can handle
 
 ## Combined Architecture
 
-![Load balancer, two parallel apps, and database connected as required serial tiers](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/combine.png)
+![Load balancer, two parallel apps, and database connected as required serial tiers](./images/combine.png)
 
 A tier is a group that performs one role. Calculate the parallel app tier first, then multiply by load balancer and database availability: `A_system = A_lb * A_apps * A_db`. The shared load balancer and database can each stop the service. These estimates assume independent failures; a shared power or network failure can take down multiple copies together.
 
@@ -235,7 +235,7 @@ python3 availability.py --csv components.csv
 
 **Explanation:** Compares the built-in examples, direct inputs, and CSV system.
 
-![Demo results showing availability, equivalent nines, and downtime for four designs](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-calculation-result.png)
+![Demo results showing availability, equivalent nines, and downtime for four designs](./images/availability-calculation-result.png)
 
 **What to expect:** The image shows the demo's values; this script prints minutes without the extra hour labels. The combined demo gives 99.889910%. The CSV adds a required cache, lowering availability to 99.790020%, about 18.4 hours of downtime per year.
 
