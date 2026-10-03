@@ -2,7 +2,7 @@
 
 ![Availability lab: design a topology, calculate availability, and compare uptime and downtime](./images/availability.png)
 
-Build a calculator that shows how component reliability affects a whole system. Compare required components in a serial chain with backup copies in a parallel group, then estimate downtime.
+Build a calculator that shows how component reliability affects a whole system. Compare required components in a serial chain with backup copies in a parallel group, then estimate downtime. In the thumbnail, A is a shared dependency before the two parallel B copies.
 
 ## Objective
 
@@ -26,7 +26,7 @@ Spreadsheet ---> components.csv ---> Python 3 ---> Report
 
 **Explanation:** A spreadsheet helps edit inputs, and Python calculates the result.
 
-Use Python 3 and a terminal. Node.js is an alternative implementation option; this lab provides Python code. Edit comma-separated values (CSV) in a spreadsheet.
+Use Python 3.8 or later and a terminal. Python and terminal knowledge help. Node.js is an alternative; this lab uses Python. Edit comma-separated values (CSV) in a spreadsheet.
 
 ## Deliverable
 
@@ -36,7 +36,7 @@ availability.py + component nines + topology ---> Availability report
 
 **Explanation:** One calculator handles direct inputs and a CSV system definition.
 
-A working `availability.py` calculator that outputs system availability given per-component nines and topology.
+`availability.py` outputs system availability from component nines and topology.
 
 ## Availability and Nines
 
@@ -60,7 +60,7 @@ Each extra nine reduces expected downtime tenfold. The calculator uses a 30-day 
 
 ![Serial dependencies: the app is down and cannot connect to the database](./images/serial.png)
 
-Every required component must work. The diagram shows an app failure breaking the request path to the database. For independent failures, multiply component availability: `A_system = A_1 * A_2`. Adding a required component below 100% availability lowers the total.
+Every required component must work. The diagram shows an app failure breaking the request path to the database. For independent failures, the pictured system uses `A_system = A_lb * A_app * A_db`. For two 99.9% components, `0.999 * 0.999 = 0.998001`, or 99.8001%. Adding a required component below 100% availability lowers the total.
 
 ## Parallel Architecture
 
@@ -70,9 +70,9 @@ A replica is another copy of a component. App 1 can serve requests when App 2 fa
 
 ## Compare the Designs
 
-![Comparison of single, serial, and parallel components with 99.9% availability each](./images/availability-comparision.png)
+![Comparison of single, serial, and parallel components with 99.9% availability each](./images/availability-calculation-result.png)
 
-The parallel result excludes shared dependencies and assumes one copy can handle all traffic.
+Parallel results exclude shared dependencies and assume sufficient capacity.
 
 | Design | Availability | Expected downtime/year |
 | :--- | :--- | :--- |
@@ -96,8 +96,6 @@ m3-l1/
 
 **Explanation:** Keep the calculator and its input file together.
 
-Create the project files.
-
 ```bash
 mkdir -p m3-l1 && cd m3-l1
 touch availability.py components.csv
@@ -115,7 +113,7 @@ Nines ---> Probabilities ---> Serial or parallel calculation ---> Report
 
 **Explanation:** Convert nines into decimals before applying the formulas.
 
-Paste this complete file into `availability.py`. CSV groups combine both topologies.
+Paste this file into `availability.py`. `math.prod()` multiplies values; `parallel()` subtracts the probability that all copies fail from one.
 
 ```python
 import argparse
@@ -201,7 +199,7 @@ if __name__ == "__main__":
 LB ---> (API-server-1 OR API-server-2) ---> Database ---> Cache
 ```
 
-**Explanation:** The CSV extends the combined diagram with a required cache tier.
+**Explanation:** The CSV adds a required cache tier.
 
 Paste this into `components.csv`. Matching group names identify parallel copies; different groups are required serial dependencies. Keep the header when exporting CSV.
 
@@ -235,9 +233,19 @@ python3 availability.py --csv components.csv
 
 **Explanation:** Compares the built-in examples, direct inputs, and CSV system.
 
-![Demo results showing availability, equivalent nines, and downtime for four designs](./images/availability-calculation-result.png)
+The comparison image above covers the first three demo results. It converts yearly downtime to hours or seconds; the calculator prints minutes. The combined demo uses a three-nine load balancer, two three-nine apps, and a four-nine database.
 
-**What to expect:** The image shows the demo's values; this script prints minutes without the extra hour labels. The combined demo gives 99.889910%. The CSV adds a required cache, lowering availability to 99.790020%, about 18.4 hours of downtime per year.
+```text
+combined LB -> (API || API) -> DB
+  availability: 99.889910%
+  nines:        2.958
+  downtime:     47.56 min/month
+                578.63 min/year
+```
+
+**Explanation:** This demo output matches the combined architecture without a cache.
+
+**What to expect:** The serial command gives 99.790120%; the parallel command gives 99.999900%. The CSV adds a required cache to the combined model, lowering availability to 99.790020%, about 18.4 hours of downtime per year.
 
 ---
 
