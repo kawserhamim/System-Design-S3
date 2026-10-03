@@ -1,278 +1,209 @@
 # Availability Math
 
-![Availability Workflow: Users connect to Load Balancer, Switch, and Application Servers to keep the service up](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability.png)
+![Availability lab: design a topology, calculate availability, and compare uptime and downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability.png)
 
-In system design, engineers often measure availability in "nines": 99.9%, 99.99%, or 99.999%. In this lab, you build a Python calculator that takes each component's nines and its topology, meaning how the components connect. Compare serial chains with parallel backup groups and calculate total system availability.
+Build a calculator that shows how component reliability affects a whole system. Compare required components in a serial chain with backup copies in a parallel group, then estimate downtime.
 
 ## Objective
 
-Compute composite availability, the total availability of a system, for serial and parallel (redundant) component chains.
+```text
+Component nines + topology ---> System availability
+```
+
+**Explanation:** Topology means how components connect.
+
+By the end of this lab, you can:
+
+- Compute availability for serial and parallel component chains.
+- Combine parallel groups into a serial system.
+- Read availability and downtime from calculator output.
 
 ## Tools/Stack
 
-- Python 3 and a terminal. This lab uses Python for the script; Node.js is an alternative implementation option.
-- A spreadsheet application to inspect or edit `components.csv`, the comma-separated values file that describes the components and their groups.
+```text
+Spreadsheet ---> components.csv ---> Python 3 ---> Report
+```
+
+**Explanation:** A spreadsheet helps edit inputs, and Python calculates the result.
+
+Use Python 3 and a terminal. Node.js is an alternative implementation option; this lab provides Python code. Edit comma-separated values (CSV) in a spreadsheet.
 
 ## Deliverable
 
-A calculator, `availability.py`, that outputs system availability given per-component nines and a serial or parallel topology. Use `components.csv` to describe systems with parallel groups connected in series. The calculator also reports estimated downtime and can suggest backup copies for an availability target.
-
-## Before You Start
-
-You need Python 3 and a terminal. The calculator uses only the Python standard library. Build `availability.py` by adding the code blocks in Steps 2-5 in order, then run it in Step 6. If you edit `components.csv` in a spreadsheet, keep its header row and export it as CSV before running the calculator.
-
-## What is Availability?
-
 ```text
-Service timeline: [ Up ][ Up ][ Down ][ Up ][ Up ]
-Availability = share of total time the service is up
+availability.py + component nines + topology ---> Availability report
 ```
 
-**Explanation:** The timeline shows how uptime and downtime make up the measurement window.
+**Explanation:** One calculator handles direct inputs and a CSV system definition.
 
-Availability is the percentage of time a system remains operational and reachable to process user requests over a given time window. It measures overall service health under normal traffic as well as unexpected failures.
+A working `availability.py` calculator that outputs system availability given per-component nines and topology.
 
-The standard formula for availability is:
-
-```text
-Availability = Total Uptime / (Total Uptime + Total Downtime)
-Availability Percentage = Availability * 100
-```
-
-**Explanation:** Dividing uptime by the full measurement window gives availability as a decimal or percentage.
-
-For example, if a service runs across a 30-day month (43,200 minutes) and suffers 43.2 minutes of total downtime, its availability is 99.9%. Even small fractional drops in availability can mean hours of service disruption and significant business loss.
-
-## What are Nines?
+## Availability and Nines
 
 ```text
-99%  --->  99.9%  --->  99.99%  --->  99.999%
-       10x less     10x less      10x less downtime
+Availability = uptime / (uptime + downtime)
+3 nines = 99.9% = 0.999
 ```
 
-**Explanation:** Each extra nine reduces allowed downtime by a factor of ten for the same time window.
+**Explanation:** Availability is the share of time a service works; nines describe its percentage.
 
-Engineers and cloud providers express service level agreements (SLAs) using "nines". Each additional nine cuts allowed downtime by a factor of ten.
+Each extra nine reduces expected downtime tenfold. The calculator uses a 30-day month and a 365-day year.
 
-| Nines | Availability | Downtime per Month | Downtime per Year |
+| Nines | Availability | Downtime/month | Downtime/year |
 | :--- | :--- | :--- | :--- |
-| 2 nines | 99.0% | 432.00 min (7.2 hours) | 5256.00 min (3.65 days) |
-| 3 nines | 99.9% | 43.20 min | 525.60 min (8.8 hours) |
-| 4 nines | 99.99% | 4.32 min | 52.56 min |
-| 5 nines | 99.999% | 0.43 min (26 seconds) | 5.26 min |
-
-The table uses a 30-day month and a 365-day year, matching the calculator below.
-
-Moving from 3 nines to 4 nines reduces yearly downtime from almost 9 hours to under an hour. Reaching 5 nines allows only 5 minutes of total downtime per year, which leaves very little room for failure detection, recovery, and maintenance.
+| 2 | 99% | 432 min | 5,256 min |
+| 3 | 99.9% | 43.2 min | 525.6 min |
+| 4 | 99.99% | 4.32 min | 52.56 min |
+| 5 | 99.999% | 0.432 min | 5.256 min |
 
 ## Serial Architecture
 
-![Serial Architecture: Users connect to Load Balancer, Application Server, and Database in series. If one fails, the service is unavailable](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial.png)
+![Serial dependencies: the app is down and cannot connect to the database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial.png)
 
-In a serial system, requests travel through components one after another in a single line. Every component in the path must work for the request to succeed. If the load balancer fails, the application server never gets the traffic.
-
-Assuming independent component failures, availability multiplies across each component in the line. Here, `A` represents availability as a decimal between 0 and 1:
-
-```text
-A_system = A_1 * A_2 * ... * A_n
-```
-
-**Explanation:** Multiply the availability of every required component to calculate serial availability.
-
-A serial chain cannot be more available than its least available component. Under this model, adding another required component with availability below 100% reduces overall availability.
+Every required component must work. The diagram shows an app failure breaking the request path to the database. For independent failures, multiply component availability: `A_system = A_1 * A_2`. Adding a required component below 100% availability lowers the total.
 
 ## Parallel Architecture
 
-![Parallel Architecture: Users connect to Load Balancer, Switch, and Parallel Application Servers. Service stays up even if one server fails](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/parallel.png)
+![Parallel app replicas: App 1 is up, App 2 is down, and both share a load balancer](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/parallel.png)
 
-In a parallel system, backup copies run side by side. The parallel group stays available as long as at least one copy is healthy, reachable, and able to handle the traffic.
+A replica is another copy of a component. App 1 can serve requests when App 2 fails, assuming successful routing and enough capacity. For independent failures, `A_group = 1 - (1 - A_1) * (1 - A_2)`. This covers the app group only; the shared load balancer remains a required dependency.
 
-The group’s availability is one minus the probability that all copies are unavailable at the same time:
+## Compare the Designs
 
-```text
-A_group = 1 - (1 - A_1) * (1 - A_2) * ... * (1 - A_n)
-```
+![Comparison of single, serial, and parallel components with 99.9% availability each](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-comparision.png)
 
-**Explanation:** Subtract the chance that all independent copies fail from one to calculate group availability.
+The parallel result excludes shared dependencies and assumes one copy can handle all traffic.
 
-This formula assumes that redundant copies fail independently. If two servers share the same power supply or network switch, a single hardware fault can take down both. Keep failure independence in mind when building real architectures.
+| Design | Availability | Expected downtime/year |
+| :--- | :--- | :--- |
+| Single component | 99.9% | 8.76 hours |
+| Two in series | 99.8001% | 17.51 hours |
+| Two in parallel | 99.9999% | 31.54 seconds |
 
-## Serial vs Parallel
+## Combined Architecture
 
-```text
-Serial:    Request ---> [ A ] ---> [ B ]
-Parallel:  Request ---> [ A or B ]
-```
+![Load balancer, two parallel apps, and database connected as required serial tiers](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/combine.png)
 
-**Explanation:** Serial paths need both components, while parallel groups need at least one healthy copy.
-
-Comparing serial and parallel designs shows why modern production systems combine both models:
-
-| Architecture | Formula | What Happens | Example |
-| :--- | :--- | :--- | :--- |
-| Serial (In a line) | `A1 * A2 * ... * An` | Limited by the weakest component | Two 99.9% servers yield 99.80% |
-| Parallel (Side by side) | `1 - (1-A1) * (1-A2)` | Backup copies improve uptime | Two 99.9% servers yield 99.9999% |
-| Combined System | Serial line of backup groups | Redundancy improves individual tiers | `LB -> (API \|\| API) -> DB` |
-
-A real production architecture connects distinct tiers in series, but runs multiple redundant copies in parallel inside each critical tier.
-
-## Combined Architecture: Serial Tiers with Parallel Servers
-
-![Combined architecture: a load balancer routes requests to three parallel servers, followed by a shared cache and database. Server 3 is down, while Servers 1 and 2 remain available](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/combine.png)
-
-The diagram combines both availability models. Requests pass through the load balancer, one healthy application server, the cache, and the database. These tiers form a serial chain, while the three application servers form a parallel group within that chain.
-
-Server 3 is down, but Servers 1 and 2 can still handle requests. The load balancer must detect the failed server and route traffic to healthy servers. This keeps the application tier available as long as at least one server works and has enough capacity to handle the traffic.
-
-Calculate the availability of the parallel server group first, then multiply it by the availability of the required serial tiers:
-
-```text
-A_servers = 1 - (1 - A_server1) * (1 - A_server2) * (1 - A_server3)
-A_system = A_load_balancer * A_servers * A_cache * A_database
-```
-
-**Explanation:** Calculate the parallel server group first, then multiply the availability of the required tiers.
-
-For example, if each application server has 99.9% availability, the server group has an estimated availability of `1 - 0.001^3 = 99.9999999%`. This calculation describes availability over time; the red server in the diagram illustrates one possible failure at a particular moment.
-
-The load balancer, cache, and database are still single points of failure in this design. Even with healthy application servers, failure of any required serial tier makes the service unavailable. Adding application servers improves only the application tier; improving overall availability also requires addressing the other tiers.
-
-These formulas assume independent failures and successful routing to a healthy server. This lab treats the cache as a required dependency. If an application can bypass a failed cache and query the database directly, its availability model must account for that fallback path. The CSV example below uses two application servers instead of the three shown here, but applies the same calculation method.
-
----
+A tier is a group that performs one role. Calculate the parallel app tier first, then multiply by load balancer and database availability: `A_system = A_lb * A_apps * A_db`. The shared load balancer and database can each stop the service. These estimates assume independent failures; a shared power or network failure can take down multiple copies together.
 
 ## Step 1: Create the project
 
-Start by creating a clean directory and empty files for your calculator.
-
 ```text
 m3-l1/
-├── availability.py
-└── components.csv
+|-- availability.py
+`-- components.csv
 ```
 
-**Explanation:** The project folder contains the calculator and its input data.
+**Explanation:** Keep the calculator and its input file together.
 
-Run these commands in your terminal:
+Create the project files.
 
 ```bash
 mkdir -p m3-l1 && cd m3-l1
 touch availability.py components.csv
 ```
 
-**Explanation:** Creates a new folder named `m3-l1` and initializes empty files for the Python script and CSV data.
+**Explanation:** Creates the project and moves into its directory.
 
 ---
 
-## Step 2: Convert nines to availability
-
-Humans talk in percentages like "99.9%" or counts like "3 nines", but math formulas need decimal probabilities like `0.999`.
+## Step 2: Write the calculator
 
 ```text
-User Input ("3 nines", "99.95%") ---> Converter Helpers ---> Math Decimals (0.999, 0.9995)
+Nines ---> Probabilities ---> Serial or parallel calculation ---> Report
 ```
 
-**Explanation:** Conversion helpers turn availability inputs into decimals used by the formulas.
+**Explanation:** Convert nines into decimals before applying the formulas.
 
-Open `availability.py` and write the conversion functions:
+Paste this complete file into `availability.py`. CSV groups combine both topologies.
 
 ```python
 import argparse
 import csv
 import math
 
-MIN_PER_MONTH = 30 * 24 * 60      # 43200 minutes in a 30-day month
-MIN_PER_YEAR = 365 * 24 * 60      # 525600 minutes in a year
 
-
-def nines_to_prob(nines: float) -> float:
-    """Convert nines count to a decimal: 3 -> 0.999, 4 -> 0.9999."""
-    if nines < 1 or nines > 9:
+def probability(nines):
+    if not math.isfinite(nines) or not 1 <= nines <= 9:
         raise ValueError("nines must be between 1 and 9")
-    return 1.0 - 10 ** -nines
+    return 1 - 10 ** -nines
 
 
-def percent_to_prob(percent: float) -> float:
-    """Convert SLA percentage to a decimal: 99.95 -> 0.9995."""
-    if percent <= 0 or percent > 100:
-        raise ValueError("percent must be between 0 and 100")
-    return percent / 100.0
+def serial(values):
+    return math.prod(values)
 
 
-def prob_to_nines(p: float) -> float:
-    """Convert a decimal probability back to nines: 0.999 -> 3.0."""
-    if p <= 0 or p >= 1:
-        return float("inf")
-    return -math.log10(1.0 - p)
+def parallel(values):
+    return 1 - math.prod(1 - value for value in values)
+
+
+def report(label, value):
+    downtime = 1 - value
+    nines = f"{-math.log10(downtime):.3f}" if downtime else "beyond precision"
+    print(label)
+    print(f"  availability: {value * 100:.6f}%")
+    print(f"  nines:        {nines}")
+    print(f"  downtime:     {downtime * 43200:.2f} min/month")
+    print(f"                {downtime * 525600:.2f} min/year")
+    print()
+
+
+def read_system(path):
+    groups = {}
+    with open(path, newline="") as source:
+        for row in csv.DictReader(source):
+            group = row["group"].strip()
+            if not group or not row["component"].strip():
+                raise ValueError("component and group must not be empty")
+            groups.setdefault(group, []).append(probability(float(row["nines"])))
+    if not groups:
+        raise ValueError("CSV must contain components")
+    return serial(parallel(copies) for copies in groups.values())
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Calculate system availability")
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--nines", nargs="+", type=float)
+    inputs.add_argument("--csv")
+    inputs.add_argument("--demo", action="store_true")
+    parser.add_argument("--topology", choices=["serial", "parallel"], default="serial")
+    args = parser.parse_args()
+    try:
+        if args.demo:
+            a = probability(3)
+            report("single 99.9%", a)
+            report("serial 99.9% + 99.9%", serial([a, a]))
+            report("parallel 99.9% || 99.9%", parallel([a, a]))
+            report("combined LB -> (API || API) -> DB",
+                   serial([a, parallel([a, a]), probability(4)]))
+        elif args.csv:
+            report("SYSTEM", read_system(args.csv))
+        else:
+            values = [probability(n) for n in args.nines]
+            calculate = serial if args.topology == "serial" else parallel
+            report(args.topology, calculate(values))
+    except (ValueError, KeyError, OSError) as error:
+        parser.error(str(error))
+
+
+if __name__ == "__main__":
+    main()
 ```
 
-**What this file does:** Converts human numbers and cloud SLA percentages into clean decimal values for calculations.
+**What this file does:** Calculates availability from nines or CSV groups and prints expected downtime.
 
 ---
 
-## Step 3: Add serial calculation
-
-Next, implement the serial calculation rule where probabilities multiply across every component in the line.
+## Step 3: Write the component inputs
 
 ```text
-[ Server 1 ] ---> [ Server 2 ] ---> [ Server 3 ]  =>  A1 * A2 * A3
+LB ---> (API-server-1 OR API-server-2) ---> Database ---> Cache
 ```
 
-**Explanation:** All three servers must work for the serial path to stay available.
+**Explanation:** The CSV extends the combined diagram with a required cache tier.
 
-Append the `serial` function to `availability.py`:
-
-```python
-def serial(*probs: float) -> float:
-    """Every component must work. Probabilities multiply."""
-    out = 1.0
-    for p in probs:
-        out *= p
-    return out
-```
-
-**What this file does:** Multiplies probabilities together to calculate the combined availability of components in series.
-
----
-
-## Step 4: Add parallel calculation
-
-Now implement the parallel calculation rule where redundant backup copies run side by side.
-
-```text
-[ Server 1 ] || [ Server 2 ]  =>  1 - (1 - A1) * (1 - A2)
-```
-
-**Explanation:** The parallel group stays available when at least one server works.
-
-Append the `parallel` function to `availability.py`:
-
-```python
-def parallel(*probs: float) -> float:
-    """At least one copy must work. Assumes copies fail independently."""
-    out = 1.0
-    for p in probs:
-        out *= (1.0 - p)
-    return 1.0 - out
-```
-
-**What this file does:** Computes the combined availability of parallel redundant servers assuming independent failures.
-
----
-
-## Step 5: Connect the System Model and Reporting
-
-Now connect the formulas to a system definition. First, describe the tiers in a CSV file. Then add output formatting, file loading, redundancy suggestions, and command-line handling.
-
-```text
-CSV File ---> load_groups() ---> Parallel Groups ---> Serial System ---> Report
-```
-
-**Explanation:** The calculator reads the CSV file, evaluates each tier, and reports system availability.
-
-### Define the system tiers
-
-Open `components.csv` and add your system definition:
+Paste this into `components.csv`. Matching group names identify parallel copies; different groups are required serial dependencies. Keep the header when exporting CSV.
 
 ```csv
 component,nines,group
@@ -283,191 +214,39 @@ DB-primary,4,db
 Cache,3,cache
 ```
 
-**What this file does:** Defines the infrastructure components, their individual uptime nines, and their redundancy groups.
-
-Rows with the same `group` value are parallel copies of one tier. Different groups are required serial dependencies. Here, the two `api` servers form a parallel group; `lb`, `cache`, and `db` each contain one component. Row order does not affect the availability calculation.
-
-### Add reporting and command-line handling
-
-The code below evaluates each group, combines the groups in series, and estimates downtime. To suggest improvements, it repeatedly adds a copy to the tier that gives the largest availability increase. It does not model infrastructure costs or guarantee the cheapest deployment.
-
-Append the reporting helpers, CSV parser, suggestion engine, and CLI entry point to `availability.py`:
-
-```python
-def fmt_downtime(minutes: float, per: str) -> str:
-    """Show downtime in minutes, and add hours in parentheses if over 60."""
-    if minutes >= 60:
-        return f"{minutes:.2f} min/{per}  ({minutes / 60:.1f} hours)"
-    return f"{minutes:.2f} min/{per}"
-
-
-def report(label: str, p: float) -> None:
-    """Print clean report with percentage, nines, and downtime."""
-    nines = prob_to_nines(p)
-    nines_txt = "9+ (beyond precision)" if math.isinf(nines) else f"{nines:.3f}"
-    print(label)
-    print(f"  availability: {p * 100:.6f}%")
-    print(f"  nines:        {nines_txt}")
-    print(f"  downtime:     {fmt_downtime(MIN_PER_MONTH * (1 - p), 'month')}")
-    print(f"                {fmt_downtime(MIN_PER_YEAR * (1 - p), 'year')}")
-    print()
-
-
-def demo() -> None:
-    """Run four clear examples to verify the math."""
-    a = nines_to_prob(3)
-    report("single 99.9%", a)
-    report("serial   99.9% + 99.9%", serial(a, a))
-    report("parallel 99.9% || 99.9%", parallel(a, a))
-
-    # A real mini system: Load Balancer -> Two API Servers -> Database
-    lb = nines_to_prob(3)
-    api = parallel(nines_to_prob(3), nines_to_prob(3))
-    db = nines_to_prob(4)
-    report("combined LB -> (API || API) -> DB", serial(lb, api, db))
-
-
-def load_groups(path: str) -> dict:
-    """Read components.csv into a dictionary of groups."""
-    groups: dict = {}
-    with open(path, newline="") as fh:
-        for row in csv.DictReader(fh):
-            name = row["component"].strip()
-            group = row["group"].strip()
-            if not name or not group:
-                continue
-            nines = float(row["nines"])
-            groups.setdefault(group, []).append(nines_to_prob(nines))
-    if not groups:
-        raise ValueError(f"no usable rows in {path}")
-    return groups
-
-
-def system_availability(groups: dict) -> float:
-    """Combine parallel copies in each group, then chain all groups in series."""
-    tier_probs = [parallel(*copies) for copies in groups.values()]
-    return serial(*tier_probs)
-
-
-def report_groups(groups: dict) -> float:
-    """Print the uptime for each tier and the total system uptime."""
-    print("Tier breakdown")
-    for name, copies in groups.items():
-        tier = parallel(*copies)
-        shape = f"{len(copies)} copies in parallel" if len(copies) > 1 else "single"
-        print(f"  {name:<12} {tier * 100:11.6f}%   ({shape})")
-    print()
-    total = system_availability(groups)
-    report("SYSTEM", total)
-    return total
-
-
-def suggest_for_target(groups: dict, target_percent: float,
-                       max_adds: int = 6) -> None:
-    """Find the best component to duplicate step by step."""
-    target = percent_to_prob(target_percent)
-    current = system_availability(groups)
-    print(f"Target:  {target_percent}%")
-    print(f"Current: {current * 100:.6f}%")
-
-    if current >= target:
-        print("Already meeting the target. No change needed.\n")
-        return
-
-    print("\nEffect of adding one more copy to each tier:")
-    for name, copies in groups.items():
-        trial = {k: list(v) for k, v in groups.items()}
-        trial[name].append(max(copies))
-        new = system_availability(trial)
-        gain = prob_to_nines(new) - prob_to_nines(current)
-        print(f"  +1 {name:<12} -> {new * 100:11.6f}%   (+{gain:.3f} nines)")
-
-    plan, work = [], {k: list(v) for k, v in groups.items()}
-    for _ in range(max_adds):
-        best_name, best_val = None, system_availability(work)
-        for name, copies in work.items():
-            trial = {k: list(v) for k, v in work.items()}
-            trial[name].append(max(copies))
-            val = system_availability(trial)
-            if val > best_val:
-                best_name, best_val = name, val
-        if best_name is None:
-            break
-        work[best_name].append(max(work[best_name]))
-        plan.append(best_name)
-        if best_val >= target:
-            break
-
-    final = system_availability(work)
-    print("\nSuggested redundancy plan:")
-    if final >= target:
-        for i, name in enumerate(plan, 1):
-            print(f"  {i}. add one copy of '{name}'")
-        print(f"  -> {final * 100:.6f}%  TARGET MET")
-    else:
-        print(f"  {len(plan)} extra copies reach {final * 100:.6f}%.")
-        print("  Target not reached within this search; review the tiers and copy limit.")
-    print()
-
-
-def main() -> None:
-    ap = argparse.ArgumentParser(description="System availability calculator")
-    ap.add_argument("--csv", help="path to components.csv")
-    ap.add_argument("--nines", nargs="+", type=float,
-                    help="component nines, e.g. --nines 3 3 4")
-    ap.add_argument("--topology", choices=["serial", "parallel"], default="serial")
-    ap.add_argument("--target", type=float,
-                    help="target availability percent, e.g. 99.95")
-    ap.add_argument("--demo", action="store_true", help="run the worked examples")
-    args = ap.parse_args()
-
-    if args.csv:
-        groups = load_groups(args.csv)
-        report_groups(groups)
-        if args.target:
-            suggest_for_target(groups, args.target)
-    elif args.nines:
-        probs = [nines_to_prob(n) for n in args.nines]
-        fn = serial if args.topology == "serial" else parallel
-        report(f"{len(probs)} components in {args.topology}", fn(*probs))
-    else:
-        demo()
-
-
-if __name__ == "__main__":
-    main()
-```
-
-**What this file does:** Reads CSV tier inputs, handles CLI arguments, formats downtime reports, and suggests a redundancy plan for the requested target.
+**What this file does:** Defines component nines and their redundancy groups.
 
 ---
 
-## Step 6: Run the calculator
+## 4. Run the following commands in the terminal
 
-![Availability Calculation Results: terminal output showing availability percentage, nines, and downtime for all topologies](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-calculation-result.png)
-
-Now run your calculator across all primary scenarios to verify the math and evaluate your infrastructure.
-
-```bash
-# 1. Run the sample demo comparisons
-python3 availability.py --demo
-
-# 2. Test a serial line of components
-python3 availability.py --nines 3 3 4 --topology serial
-
-# 3. Test parallel backup components
-python3 availability.py --nines 3 3 --topology parallel
-
-# 4. Check system from CSV and get recommendations for 99.95% target
-python3 availability.py --csv components.csv --target 99.95
+```text
+Demo ---> Serial chain ---> Parallel copies ---> CSV system
 ```
 
-**Explanation:** Run the demo, compare serial and parallel designs, and calculate the CSV system’s availability and suggested backups.
+**Explanation:** Run each input type from the project directory.
 
-**What to expect:** The demo uses a smaller system with a load balancer, two API servers, and a database; it omits the cache. It prints availability percentages, nines, and downtime for single, serial, parallel, and combined topologies. For `components.csv`, it shows an overall availability of 99.790020% (about 18.4 hours of downtime per year) and suggests adding one backup copy of `lb` and one of `cache` to reach the 99.95% target.
+```bash
+python3 availability.py --demo
+python3 availability.py --nines 3 3 4 --topology serial
+python3 availability.py --nines 3 3 --topology parallel
+python3 availability.py --csv components.csv
+```
+
+**Explanation:** Compares the built-in examples, direct inputs, and CSV system.
+
+![Demo results showing availability, equivalent nines, and downtime for four designs](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-calculation-result.png)
+
+**What to expect:** The image shows the demo's values; this script prints minutes without the extra hour labels. The combined demo gives 99.889910%. The CSV adds a required cache, lowering availability to 99.790020%, about 18.4 hours of downtime per year.
 
 ---
 
 ## Conclusion
 
-You built a working calculator that turns system design percentages into real minutes of downtime. You learned why serial chains lower uptime, how parallel redundancy prevents outages, and how to identify the weakest link in an architecture. In the next lab, you will define service level objectives (SLOs), calculate error budgets, and set alerts for excessive budget consumption.
+```text
+Availability estimates ---> Service targets ---> Error budgets
+```
+
+**Explanation:** Use the results to set measurable reliability targets.
+
+You can now turn component nines and topology into system availability and expected downtime. Next, use service level objectives, or reliability targets, to calculate how much failure a service can tolerate.
