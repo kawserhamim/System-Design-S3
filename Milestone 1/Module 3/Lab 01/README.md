@@ -136,8 +136,7 @@ Our lab system combines three required roles: a load balancer, an app group, and
 
 **Follow a request:** the load balancer chooses one working app, that app reads the database, and the result returns to the user. The request needs **one app**, plus the load balancer and database.
 
-Use three nines for the load balancer and each app, and four nines for the database:
-
+Use **three nines for the load balancer and each app**, and **four nines for the database**. These are inputs to the model, not measured guarantees.
 ```text
 1. Calculate the app group:
    Apps = 1 - (1 - 0.999) × (1 - 0.999) = 0.999999
@@ -148,7 +147,7 @@ Use three nines for the load balancer and each app, and four nines for the datab
           ≈ 99.889910%
 ```
 
-The app group has six nines, but the whole system has slightly less than three nines. **Backup apps cannot remove failures in shared dependencies.**
+The app group has six nines, but the whole system has about 2.958 nines. **Backup apps cannot remove failures in shared dependencies.**
 
 These formulas assume components fail independently, routing sends requests to a healthy copy, and a surviving copy has enough capacity. Two apps on the same failed machine would go down together, so the independent-failure estimate would be too optimistic.
 
@@ -288,7 +287,7 @@ python3 availability.py --demo
 **Expected output:**
 
 <p align="center">
-  <img src="./images/demo-output.png" alt="Actual terminal output comparing a single component, serial components, parallel copies, and the combined system" width="800">
+  <img src="./images/demo-output.png" alt="Calculator output comparing a single component, serial components, parallel copies, and the combined system" width="800">
 </p>
 
 **How to read the report:**
@@ -298,7 +297,7 @@ python3 availability.py --demo
 - `downtime` is the expected unavailable time in a 30-day month and a 365-day year. The calculator prints **minutes**.
 - `||` means alternatives; `->` means required tiers.
 
-The first three results match the comparison diagram. The last result matches the combined diagram: **99.889910%** availability and **578.63 minutes** of yearly downtime, or about **9.64 hours**.
+The first three results match the comparison diagram. The last result matches the combined diagram: **99.889910%** availability and **578.63 minutes** of yearly downtime, or about **9.64 hours**. This combined example uses a four-nine database.
 
 ### Try the formulas directly
 
@@ -346,7 +345,7 @@ python3 availability.py --csv components.csv
 **Expected output:**
 
 <p align="center">
-  <img src="./images/csv-system-output.png" alt="Actual terminal CSV report shows 99.889910 percent availability and 578.63 minutes of yearly downtime" width="800">
+  <img src="./images/csv-system-output.png" alt="Calculator CSV report shows 99.889910 percent availability and 578.63 minutes of yearly downtime" width="800">
 </p>
 
 **What happened?** It calculated the `api` group first, then multiplied `lb × api × db`. The result matches the last demo report. That match confirms your CSV describes the same design as the diagram.
@@ -355,9 +354,7 @@ python3 availability.py --csv components.csv
 
 We already have two app copies. What happens if we improve the shared load balancer?
 
-1. In `components.csv`, change `LB-1,3,lb` to `LB-1,4,lb`.
-2. Save the file. Leave both apps and the database unchanged.
-3. Run the same command again:
+In `components.csv`, change `LB-1,3,lb` to `LB-1,4,lb`. Save the file, leaving both apps and the database unchanged. Run the same command again:
 
 ```bash
 python3 availability.py --csv components.csv
@@ -376,20 +373,15 @@ python3 availability.py --csv components.csv
 | Original: three-nine load balancer | 99.889910% | 578.63 minutes (about 9.64 hours) |
 | Improved: four-nine load balancer | 99.979901% | 105.64 minutes (about 1.76 hours) |
 
-We improved the load balancer's assumed availability from 99.9% to 99.99%. This reduces the whole system's expected downtime because every request depends on it. Editing the CSV changes the **model**; achieving that improvement in a deployed service requires actual engineering work.
+We improved the load balancer's assumed availability from **99.9% to 99.99%**. This reduces the whole system's expected downtime because every request depends on it. Editing the CSV changes the model; achieving that improvement in a deployed service requires actual engineering work.
 
 **Your task:** write three short sentences explaining what changed, how yearly downtime changed, and why backup apps alone cannot protect against a failed load balancer.
 
 ## Step 6: Verify Your Work
 
-- [ ] The demo runs and its serial and parallel results match the comparison diagram.
-- [ ] The original CSV result matches the combined demo result.
-- [ ] Improving the load balancer reduces expected yearly downtime.
-- [ ] I can explain “all parts must work” versus “one copy is enough.”
-- [ ] I include shared dependencies when calculating the whole system.
-- [ ] I have written my three-sentence comparison.
+Compare the demo's serial and parallel results with the comparison diagram, then confirm that the original CSV matches the combined demo result. After improving the load balancer, check that expected yearly downtime falls from **578.63 to 105.64 minutes**. Submit `availability.py`, the improved `components.csv`, and your three-sentence comparison explaining required parts, alternative copies, and shared dependencies.
 
-If you get stuck:
+**If you get stuck:**
 
 | Problem | What to check |
 | --- | --- |
@@ -400,14 +392,4 @@ If you get stuck:
 
 ## Conclusion
 
-You can now turn a system diagram into an availability estimate—and use expected downtime to guide your design decisions.
-
-| Design principle | Key takeaway |
-| --- | --- |
-| **Every required part matters** | Serial dependencies reduce overall availability because any one can stop a request. |
-| **One healthy copy can keep service running** | Parallel replicas improve availability when their failures are independent. |
-| **Shared dependencies still matter** | Backup apps cannot protect against a failed load balancer or shared database. |
-
-> **From diagram to decision:** calculate each parallel group first, multiply the required tiers, then compare expected downtime to choose which dependency to improve.
-
-In this lab, improving the load balancer from **three nines to four nines** reduced expected yearly downtime from **9.64 hours to 1.76 hours**. A stronger shared dependency made the whole system more available.
+Calculate each parallel group first, then multiply the required tiers to estimate system availability. Independent replicas improve availability, but shared dependencies can still stop a request. In this lab, improving the load balancer from three to four nines reduced expected yearly downtime from **9.64 hours to 1.76 hours**.
