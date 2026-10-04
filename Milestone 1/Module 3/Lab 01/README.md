@@ -12,6 +12,8 @@ In this lab, you will build a Python calculator to compare these designs and est
 
 **Read the picture from left to right:** choose how the components connect, calculate their availability, then compare uptime and downtime. In the lower design, A is required and the two B copies are alternatives. If A fails, neither B copy can help.
 
+The lower design is labeled “Parallel” because the B copies form a parallel group. The complete design is combined: `A → (B || B)`. Calculate the B group first, then multiply its availability by A's availability.
+
 ## Objective
 
 By the end, you will be able to:
@@ -169,7 +171,11 @@ sudo apt install -y python3
 python3 --version
 ```
 
-**Expected:** `Python 3.8` or newer. The exact version can differ.
+<p align="center">
+  <img src="./images/python-install.png" alt="Python version check: python3 --version prints Python 3.12.3" width="800">
+</p>
+
+**Expected:** `Python 3.8` or newer. The screenshot shows `Python 3.12.3`, which meets the requirement. Your exact version can differ.
 
 Create the folder and two empty files:
 
