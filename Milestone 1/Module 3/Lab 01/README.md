@@ -6,7 +6,9 @@ A successful request needs all three parts. If any required part fails, the user
 
 In this lab, you will build a Python calculator to compare these designs and estimate their downtime. **You are calculating a model; you do not need to start real servers.**
 
-![Lab overview: choose a design, calculate availability, and compare uptime and downtime](./images/availability.png)
+<p align="center">
+  <img src="./images/availability.png" alt="Lab overview: choose a design, calculate availability, and compare uptime and downtime" width="800">
+</p>
 
 **Read the picture from left to right:** choose how the components connect, calculate their availability, then compare uptime and downtime. In the lower design, A is required and the two B copies are alternatives. If A fails, neither B copy can help.
 
@@ -58,7 +60,9 @@ This is an estimate over time, not a prediction of when an outage will happen.
 
 In the URL shortener, the load balancer sends the request to the app, and the app reads the database. All three are required for this request.
 
-![Serial request path: the app is down, so the request cannot continue to the database](./images/serial.png)
+<p align="center">
+  <img src="./images/serial.png" alt="Serial request path: the app is down, so the request cannot continue to the database" width="800">
+</p>
 
 **What is happening?** The request reaches the load balancer, but the app is down. It cannot look up the URL in the database, so the user gets no successful redirect. “Cannot connect” describes the broken request path; the database itself may still be running.
 
@@ -81,7 +85,9 @@ Serial availability = 0.999 × 0.999
 
 A **replica** is another copy that can do the same job. Two interchangeable app servers form a parallel group.
 
-![Parallel apps: App 1 is up and handles requests while App 2 is down; both share a load balancer](./images/parallel.png)
+<p align="center">
+  <img src="./images/parallel.png" alt="Parallel apps: App 1 is up and handles requests while App 2 is down; both share a load balancer" width="800">
+</p>
 
 **What is happening?** App 2 is down. The load balancer sends the request to App 1, which still works. The app group is unavailable only when **both copies are down**.
 
@@ -106,7 +112,9 @@ This result describes **the app group**. The shared load balancer remains requir
 
 ### Compare the results
 
-![One three-nine component has 8.76 hours of yearly downtime; two in series have 17.51 hours; two parallel copies have 31.54 seconds](./images/availability-calculation-result.png)
+<p align="center">
+  <img src="./images/availability-calculation-result.png" alt="One three-nine component has 8.76 hours of yearly downtime; two in series have 17.51 hours; two parallel copies have 31.54 seconds" width="800">
+</p>
 
 All components in the picture have the same 99.9% availability:
 
@@ -120,7 +128,9 @@ The connection between components changes the result, even when their individual
 
 Our lab system combines three required roles: a load balancer, an app group, and a database. A **tier** is a component or group doing one role.
 
-![Combined system: required load balancer, two parallel apps, and a shared required database](./images/combine.png)
+<p align="center">
+  <img src="./images/combine.png" alt="Combined system: required load balancer, two parallel apps, and a shared required database" width="800">
+</p>
 
 **Follow a request:** the load balancer chooses one working app, that app reads the database, and the result returns to the user. The request needs **one app**, plus the load balancer and database.
 
@@ -271,7 +281,9 @@ python3 availability.py --demo
 
 **Expected output:**
 
-![Actual terminal output comparing a single component, serial components, parallel copies, and the combined system](./images/demo-output.png)
+<p align="center">
+  <img src="./images/demo-output.png" alt="Actual terminal output comparing a single component, serial components, parallel copies, and the combined system" width="800">
+</p>
 
 **How to read the report:**
 
@@ -327,7 +339,9 @@ python3 availability.py --csv components.csv
 
 **Expected output:**
 
-![Actual terminal CSV report shows 99.889910 percent availability and 578.63 minutes of yearly downtime](./images/csv-system-output.png)
+<p align="center">
+  <img src="./images/csv-system-output.png" alt="Actual terminal CSV report shows 99.889910 percent availability and 578.63 minutes of yearly downtime" width="800">
+</p>
 
 **What happened?** It calculated the `api` group first, then multiplied `lb × api × db`. The result matches the last demo report. That match confirms your CSV describes the same design as the diagram.
 
@@ -345,7 +359,9 @@ python3 availability.py --csv components.csv
 
 **Expected output:**
 
-![Actual terminal report after improving the load balancer: 99.979901 percent availability and 105.64 minutes of yearly downtime](./images/improved-lb-output.png)
+<p align="center">
+  <img src="./images/improved-lb-output.png" alt="Actual terminal report after improving the load balancer: 99.979901 percent availability and 105.64 minutes of yearly downtime" width="800">
+</p>
 
 **Compare before and after:**
 
@@ -378,4 +394,14 @@ If you get stuck:
 
 ## Conclusion
 
-Required dependencies reduce system availability; interchangeable copies can improve it. Calculate the availability of each parallel group first, then multiply the required tiers. Use the resulting downtime estimate to compare designs and decide which dependency to improve.
+You can now turn a system diagram into an availability estimate—and use expected downtime to guide your design decisions.
+
+| Design principle | Key takeaway |
+| --- | --- |
+| **Every required part matters** | Serial dependencies reduce overall availability because any one can stop a request. |
+| **One healthy copy can keep service running** | Parallel replicas improve availability when their failures are independent. |
+| **Shared dependencies still matter** | Backup apps cannot protect against a failed load balancer or shared database. |
+
+> **From diagram to decision:** calculate each parallel group first, multiply the required tiers, then compare expected downtime to choose which dependency to improve.
+
+In this lab, improving the load balancer from **three nines to four nines** reduced expected yearly downtime from **9.64 hours to 1.76 hours**. A stronger shared dependency made the whole system more available.
