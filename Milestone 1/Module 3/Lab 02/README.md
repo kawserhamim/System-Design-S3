@@ -1,14 +1,18 @@
 # SLO & Error Budget Definition
 
-Imagine a customer placing an order in an online shop. The shop sends a request to the **Orders API**, the service that handles orders. If that service returns a server error, the customer may be unable to complete the purchase. How many failed requests can we allow before we need to act?
+Imagine 1,000 customers trying to place orders in an online shop. Each order sends a request to the **Orders API**, the part of the shop's software that handles orders. We want at least **999 of those requests to work without a server error**. That is a **99.9% success target**, called a service level objective (**SLO**).
 
 <p align="center">
-  <img src="./images/budget.png" alt="SLOs and error budgets: set an SLO target, allow an error budget, and watch for fast burn" width="800">
+  <img src="./images/budget.png" alt="Three steps: set a 99.9% success target, allow 0.1% failures, and alert when failures use the budget too quickly" width="800">
 </p>
 
-Follow the image from left to right: set a **99.9% success target**, allow **0.1% of requests to fail**, and raise an alert when failures use that allowance too quickly. This allowance is called an **error budget**.
+Read the three boxes in the image from left to right:
 
-In this lab, you will define which requests count as successful, calculate the Orders API's error budget, and write an alert rule to detect when that budget is being used too quickly.
+1. **Set SLO target:** aim for at least 999 successful requests out of every 1,000 over the measurement period.
+2. **Error budget:** the remaining 1 request out of 1,000 may fail. This **0.1% allowance** is the error budget.
+3. **Alert on burn:** if failed requests use up this allowance too quickly, raise an alert so the team can investigate.
+
+In this lab, you will decide which requests count as good or bad, calculate the allowed failures over 30 days, and write a rule that alerts the team when failures happen too quickly.
 
 ## Objective
 
