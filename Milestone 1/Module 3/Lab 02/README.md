@@ -1,10 +1,14 @@
 # SLO & Error Budget Definition
 
+Imagine a customer placing an order in an online shop. The shop sends a request to the **Orders API**, the service that handles orders. If that service returns a server error, the customer may be unable to complete the purchase. How many failed requests can we allow before we need to act?
+
 <p align="center">
   <img src="./images/budget.png" alt="SLOs and error budgets: set an SLO target, allow an error budget, and watch for fast burn" width="800">
 </p>
 
-An application programming interface (API) lets programs request data. Define an Orders API target, calculate its error budget, and write an alert rule.
+Follow the image from left to right: set a **99.9% success target**, allow **0.1% of requests to fail**, and raise an alert when failures use that allowance too quickly. This allowance is called an **error budget**.
+
+In this lab, you will define which requests count as successful, calculate the Orders API's error budget, and write an alert rule to detect when that budget is being used too quickly.
 
 ## Objective
 
