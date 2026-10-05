@@ -16,7 +16,9 @@ In this lab, you will decide which requests count as good or bad, calculate the 
 
 ## Objective
 
-Define service level indicators (SLIs) and service level objectives (SLOs) for a sample API, then derive its monthly error budget. This lab uses the Orders API and a rolling 30-day month.
+- Define a service level indicator (**SLI**) to measure good requests for the Orders API.
+- Set a service level objective (**SLO**) of **99.9% good requests** over the most recent 30 days.
+- Calculate the **error budget**: how many failed requests are allowed within that rolling 30-day window.
 
 ## Tools/Stack
 
