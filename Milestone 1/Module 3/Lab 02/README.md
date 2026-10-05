@@ -1,6 +1,8 @@
 # SLO & Error Budget Definition
 
-![SLOs and error budgets: set an SLO target, allow an error budget, and watch for fast burn](images/budget.png)
+<p align="center">
+  <img src="./images/budget.png" alt="SLOs and error budgets: set an SLO target, allow an error budget, and watch for fast burn" width="800">
+</p>
 
 An application programming interface (API) lets programs request data. Define an Orders API target, calculate its error budget, and write an alert rule.
 
@@ -16,17 +18,27 @@ Define service level indicators (SLIs) and service level objectives (SLOs) for a
 
 ## Deliverable
 
-An SLO document, `slo-document.md`, with the API's request rules, availability target, monthly error budget, and budget burn-rate thresholds. A supporting file, `orders-api-rules.yml`, shows the fast-burn threshold as a Prometheus query sketch.
+An SLO document, `slo-document.md`, with the API's request rules, availability target, monthly error budget, and budget burn-rate thresholds. A supporting file, `orders-api-rules.yaml`, shows the fast-burn threshold as a Prometheus query sketch.
+
+<p align="center">
+  <img src="./images/what-you-create.png" alt="Deliverables: an SLO document and a YAML rule file with dual-window alert conditions" width="800">
+</p>
+
+The SLO document records all three burn-rate thresholds. In this lab, the YAML file implements the 14.4x fast-burn rule; the diagram also lists the 6x threshold as a possible extension.
 
 ## Which Requests Count? (SLI and SLO)
 
-![Which requests count: filter cancellations and health checks to separate good from bad requests](images/which-requests.png)
+<p align="center">
+  <img src="./images/which-requests-orginal.png" alt="Which requests count: filter cancellations and health checks to separate good from bad requests" width="800">
+</p>
 
 A service level indicator (SLI) measures performance; a service level objective (SLO) sets its target. Client cancellations (code 499) and health checks (`/healthz`) are filtered out first. From the remaining valid requests, responses with 2xx, 3xx, and 4xx count as good, while 5xx server errors count as bad.
 
 ## When Do We Alert? (Error Budgets and Burn Rate)
 
-![When do we alert: multi-window burn rate thresholds and notification actions](images/burn-rate-alerting.png)
+<p align="center">
+  <img src="./images/burn-rate-alerting.png" alt="When do we alert: multi-window burn rate thresholds and notification actions" width="800">
+</p>
 
 An error budget is the allowed bad fraction: `1 - SLO`. A 99.9% target over rolling 30 days permits 0.1% failures. Burn rate measures how fast your service spends this budget. At steady traffic, a 1x burn rate uses the budget in 30 days; 14.4x uses it in about two days.
 
@@ -69,11 +81,12 @@ The API used 40% of its budget. Its 99.96% good-request rate exceeds the 99.9% t
 Choose when to notify the team based on how quickly failures use the budget. A page is an urgent notification; a ticket is a task to review later.
 
 ```text
-High error rate over 1 hour AND the last 5 minutes --> urgent alert
+High error rate over 1 hour AND the last 5 minutes
+Both conditions stay true for 2 minutes           --> urgent alert
 High error rate in only one window                --> no fast alert
 ```
 
-**Explanation:** Both windows must exceed the threshold to confirm the problem is continuing.
+**Explanation:** Both windows must exceed the threshold. The fast-burn rule in Step 4 also requires this combined condition to remain true for two minutes, matching the alert diagram.
 
 Create `slo-document.md` in your practice folder and paste this complete document:
 
@@ -125,15 +138,18 @@ Fast-alert threshold: `14.4 x 0.1% = 1.44%`. Review tickets the next business da
 
 ## Step 4: Write the Fast-Burn Alert Rule
 
-Create `orders-api-rules.yml` in your practice folder. Prometheus monitors metrics, and its query language, PromQL, calculates error rates from request counts.
+Create `orders-api-rules.yaml` in your practice folder. Prometheus monitors metrics, and its query language, PromQL, calculates error rates from request counts.
 
-![Fast alert: both 1-hour and 5-minute error rates exceed 1.44% at the same evaluation](images/fast-alert-no-delay.png)
+<p align="center">
+  <img src="./images/fast-alert.png" alt="Fast alert: both 1-hour and 5-minute error rates exceed 1.44% continuously for two minutes" width="800">
+</p>
 
 ```yaml
 groups:
   - name: orders-api-slo
     rules:
       - alert: OrdersAPIErrorBudgetBurnFast
+        for: 2m
         expr: |
           (
             1 - sum(rate(http_requests_total{job="orders-api",code!~"5..|499",route!="/healthz"}[1h]))
@@ -152,15 +168,15 @@ groups:
           summary: "orders-api is burning its error budget fast"
 ```
 
-**What this file does:** Defines an alert that fires at the first rule evaluation where both error rates exceed 1.44%.
+**What this file does:** Defines an alert that fires once both error rates have remained above 1.44% for two minutes across rule evaluations.
 
-`rate()` handles counter resets. The 5-minute lookback smooths recent measurements and confirms that errors are still occurring. This rule omits `for` to avoid an extra pending period after both thresholds are crossed.
+`rate()` handles counter resets. The 5-minute lookback smooths recent measurements and confirms that errors are still occurring. `for: 2m` adds a two-minute pending period after both thresholds are crossed. If either condition stops being true during that period, the alert does not fire.
 
 A lookback window is not a fixed waiting period: a large spike can cross both thresholds before five minutes have passed. Detection time depends on traffic, the error rate, and scrape and rule evaluation intervals. Notification delivery can add further delay. See the [Prometheus alerting rules documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/).
 
 ---
 
-## 5. Run the following commands in the terminal
+## Step 5: Check the Rule File
 
 This optional step checks the supporting query sketch. On Linux with an x86-64 processor, download Prometheus and use its `promtool` checker to validate the rule file.
 
@@ -178,14 +194,16 @@ tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
 **Explanation:** Extracts the Prometheus binaries to your practice folder.
 
 ```bash
-./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yml
+./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
 ```
 
 **Explanation:** Checks the rule syntax without starting a server.
 
-![Check your rule file: promtool check rules outputs SUCCESS](images/run-output.png)
+<p align="center">
+  <img src="./images/run-output.png" alt="Check your rule file: promtool check rules outputs SUCCESS" width="800">
+</p>
 
-**What to expect:** The output prints `SUCCESS: 1 rules found`, confirming valid syntax. Sending notifications also requires a running Prometheus setup and notification configuration.
+**What to expect:** The output reports `SUCCESS` and one rule found, confirming valid syntax. The diagram uses `promtool` directly; the command above uses the binary from the extracted folder. Sending notifications also requires a running Prometheus setup and notification configuration.
 
 ---
 
