@@ -381,15 +381,6 @@ We improved the load balancer's assumed availability from **99.9% to 99.99%**. T
 
 Compare the demo's serial and parallel results with the comparison diagram, then confirm that the original CSV matches the combined demo result. After improving the load balancer, check that expected yearly downtime falls from **578.63 to 105.64 minutes**. Submit `availability.py`, the improved `components.csv`, and your three-sentence comparison explaining required parts, alternative copies, and shared dependencies.
 
-**If you get stuck:**
-
-| Problem | What to check |
-| --- | --- |
-| `python3: command not found` | Install Python 3.8 or newer. If your system uses `python`, check its version and use that command. |
-| `can't open file 'availability.py'` | Run from `m3-l1/` and check that the file was saved there. |
-| CSV file or column-name error | Check the filename and the exact header `component,nines,group`. |
-| `nines must be between 1 and 9` | Enter a nines value such as `3`, rather than `99.9`. |
-
 ## Conclusion
 
 Calculate each parallel group first, then multiply the required tiers to estimate system availability. Independent replicas improve availability, but shared dependencies can still stop a request. In this lab, improving the load balancer from three to four nines reduced expected yearly downtime from **9.64 hours to 1.76 hours**.
