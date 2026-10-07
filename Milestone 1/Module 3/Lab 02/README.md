@@ -45,7 +45,27 @@ The diagram also shows a **6x burn-rate rule** as an optional extension. In this
   <img src="./images/which-requests-orginal.png" alt="Which requests count: filter cancellations and health checks to separate good from bad requests" width="800">
 </p>
 
-A service level indicator (SLI) measures performance; a service level objective (SLO) sets its target. Client cancellations (code 499) and health checks (`/healthz`) are filtered out first. From the remaining valid requests, responses with 2xx, 3xx, and 4xx count as good, while 5xx server errors count as bad.
+When someone uses the online shop, their browser sends a **request** to the API. The API returns a response with a number called an **HTTP status code**. For example, `200` means the request succeeded, and `500` means the server had a problem.
+
+Before measuring the API, we need two things:
+
+- **SLI (service level indicator):** the percentage of counted requests that had no server error. This tells us how the API actually performed.
+- **SLO (service level objective):** the target for that percentage. In this lab, the target is **at least 99.9% over the most recent 30 days**.
+
+**Read the diagram from top to bottom:**
+
+1. **Skip requests we do not measure.** Code `499` means the client disconnected before the server finished responding. Requests to `/healthz` are automatic checks that ask whether the service is running. This lab leaves both out of the calculation.
+2. **Keep the remaining requests.** The diagram calls these **valid requests**, meaning requests included in our measurement.
+3. **Split them into good and bad.** Codes `2xx`, `3xx`, and `4xx` count as good. Codes `5xx` count as bad. Here, `5xx` means any code from `500` to `599`.
+4. **Calculate the good-request percentage:**
+
+```text
+SLI (%) = good requests / (good requests + bad requests) x 100
+```
+
+For example, if 999 counted requests are good and 1 is bad, the SLI is `999 / 1,000 x 100 = 99.9%`. That meets our 99.9% SLO.
+
+In this lab, **good means no server error**. A `404` response counts as good because the server responded that the requested item was not found. It does not mean the customer successfully placed an order.
 
 ## When Do We Alert? (Error Budgets and Burn Rate)
 
@@ -53,11 +73,39 @@ A service level indicator (SLI) measures performance; a service level objective 
   <img src="./images/burn-rate-alerting.png" alt="When do we alert: multi-window burn rate thresholds and notification actions" width="800">
 </p>
 
-An error budget is the allowed bad fraction: `1 - SLO`. A 99.9% target over rolling 30 days permits 0.1% failures. Burn rate measures how fast your service spends this budget. At steady traffic, a 1x burn rate uses the budget in 30 days; 14.4x uses it in about two days.
+The **error budget** is the number of bad requests we can have while still meeting the SLO. Our target is 99.9% good requests, so we can allow **0.1% bad requests**:
+
+```text
+Allowed failure percentage = 100% - 99.9% = 0.1%
+```
+
+Each bad request uses part of this allowance. **Burn rate** tells us how quickly we are using it. Calculate it by dividing the measured failure percentage by the allowed failure percentage:
+
+```text
+Burn rate = measured failure percentage / 0.1%
+
+Example: 1.44% / 0.1% = 14.4x
+```
+
+The `x` means “times.” A **14.4x burn rate** means failures are using the budget 14.4 times as fast as the rate that would use the full allowance over 30 days.
+
+**Read each row of the diagram from left to right:**
+
+| Burn-rate threshold | Check the failure percentage in both periods | What the team should do |
+| :--- | :--- | :--- |
+| **14.4x — fast** | Above **1.44%** over the last **1 hour** AND the last **5 minutes** | Send an urgent alert (“Page now”). |
+| **6x — medium** | Above **0.60%** over the last **6 hours** AND the last **30 minutes** | Send an urgent alert (“Page now”). |
+| **1x — slow** | Above **0.10%** over the last **3 days** AND the last **6 hours** | Create a task for the team to investigate (“Create ticket”). |
+
+A **window** is the period we look back over. The long window checks whether errors have been happening for a while. The short window checks whether they are still happening recently. **Both must exceed the row's threshold.** A high error rate in only one window does not trigger that rule.
+
+For example, the fast rule checks for more than 1.44% failures in both windows. In Step 4, you will also require both conditions to stay true for **two minutes** before the alert fires.
+
+The diagram's “about 2 days” and “about 5 days” estimates assume steady request traffic and a failure rate that stays the same. They show how long it would take to use an allowance equal to the full 30-day budget: `30 / 14.4 ≈ 2 days`, `30 / 6 = 5 days`, and `30 / 1 = 30 days`. They are not a countdown for the budget currently remaining.
 
 ## Step 1: Define Good and Bad Requests
 
-First, decide which requests count when measuring availability. You will save these rules in `slo-document.md` in Step 3.
+Start by writing down the rules for counting requests. Use the same rules every time you calculate the SLI or the error budget. You will save them in `slo-document.md` in Step 3.
 
 ```text
 1. Skip cancelled requests (499) and health checks (/healthz).
@@ -66,16 +114,39 @@ First, decide which requests count when measuring availability. You will save th
    - 500-599: bad, because the server failed to handle the request.
 ```
 
-**Explanation:** This lab measures server availability, so client errors such as 404 count as good requests.
+**Try the rules with these examples:**
 
+| Request or response | How we count it | Why |
+| :--- | :--- | :--- |
+| `200` — request succeeded | Good | The server handled the request without a server error. |
+| `302` — redirect to another address | Good | The server returned a redirect without a server error. |
+| `404` — item not found | Good | This lab counts client errors as good responses. |
+| `499` — client disconnected | Skip | Our rules exclude cancellations. |
+| `500` — server error | Bad | The server failed to handle the request. |
+| `504` — gateway timeout | Bad | The gateway did not receive a response in time. |
+| Any request to `/healthz` | Skip | Our rules exclude health checks, whatever their status code. |
+
+**Check your understanding:** Suppose there are 100 requests: 5 health checks, 2 cancellations, 90 good requests, and 3 server errors. We skip the first 7, so there are **93 valid requests**. The SLI is `90 / 93 x 100 ≈ 96.77%`.
 
 ---
 
 ## Step 2: Calculate the Error Budget
 
-An error budget is the number of failed requests allowed while still meeting the SLO. A 99.9% target means at least 999 out of every 1,000 valid requests must be good, so 1 may fail.
+Now use the 99.9% target to calculate how many bad requests are allowed. For every 1,000 valid requests, at least 999 must be good, so at most 1 may be bad.
 
-Example: 10,000,000 valid requests in 30 days:
+Here, “monthly” means the **most recent 30 days**, rather than a calendar month. This is a **rolling window**: when we check again tomorrow, we include the newest day and drop the oldest day.
+
+Suppose the API received **10,000,000 valid requests** in that window, and **4,000** returned server errors. Health checks and cancellations have already been removed from these counts.
+
+**First, calculate the allowed failures:**
+
+```text
+Allowed failure percentage = 100% - 99.9% = 0.1%
+0.1% as a decimal          = 0.001
+Allowed failures           = 10,000,000 x 0.001 = 10,000
+```
+
+**Next, subtract the failures that already happened:**
 
 ```text
 Allowed failures: 10,000,000 x 0.1 / 100 = 10,000
@@ -83,9 +154,22 @@ Actual failures:                          4,000
 Failures still allowed: 10,000 - 4,000  =  6,000
 ```
 
-**Explanation:** The API has used 4,000 of its 10,000 allowed failures, leaving 6,000 for this example.
+The API could have up to **10,000 bad requests** for this request total and still meet the target. It has had **4,000**, so **6,000** of the allowance remain.
 
-The API used 40% of its budget. Its 99.96% good-request rate exceeds the 99.9% target.
+**Finally, check how much budget was used and whether the API met its target:**
+
+```text
+Budget used      = 4,000 / 10,000 x 100 = 40%
+Budget remaining = 6,000 / 10,000 x 100 = 60%
+
+Good requests    = 10,000,000 - 4,000 = 9,996,000
+Actual SLI       = 9,996,000 / 10,000,000 x 100 = 99.96%
+SLO target       = 99.9%
+```
+
+**Result:** The API meets the SLO because **99.96% is higher than 99.9%**. It has used **40%** of its error budget.
+
+The 6,000 remaining failures apply to this example's request total and window. Recalculate the budget as the rolling window and number of requests change. This is a **request-based budget**, so it counts failed requests, not minutes of downtime.
 
 ---
 
