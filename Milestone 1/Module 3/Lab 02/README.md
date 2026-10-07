@@ -28,13 +28,16 @@ In this lab, you will decide which requests count as good or bad, calculate the 
 
 ## Deliverable
 
-An SLO document, `slo-document.md`, with the API's request rules, availability target, monthly error budget, and budget burn-rate thresholds. A supporting file, `orders-api-rules.yaml`, shows the fast-burn threshold as a Prometheus query sketch.
+You will create two files:
+
+- **`slo-document.md`** defines which API requests count toward the SLO, the availability target, the error budget for a rolling 30-day window, and all three burn-rate thresholds (14.4x, 6x, and 1x).
+- **`orders-api-rules.yaml`** provides a Prometheus alert rule for the **14.4x fast-burn threshold**. The alert fires when the error rate exceeds 1.44% in both the 1-hour and 5-minute windows continuously for two minutes.
 
 <p align="center">
   <img src="./images/what-you-create.png" alt="Deliverables: an SLO document and a YAML rule file with dual-window alert conditions" width="800">
 </p>
 
-The SLO document records all three burn-rate thresholds. In this lab, the YAML file implements the 14.4x fast-burn rule; the diagram also lists the 6x threshold as a possible extension.
+The diagram also shows a **6x burn-rate rule** as an optional extension. In this lab, you record all three thresholds in the SLO document and implement only the **14.4x rule** in the YAML file.
 
 ## Which Requests Count? (SLI and SLO)
 
