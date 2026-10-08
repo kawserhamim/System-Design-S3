@@ -3,7 +3,7 @@
 Imagine 1,000 customers trying to place orders in an online shop. Each order sends a request to the **Orders API**, the part of the shop's software that handles orders. We want at least **999 of those requests to work without a server error**. That is a **99.9% success target**, called a service level objective (**SLO**).
 
 <p align="center">
-  <img src="./images/budget.png" alt="Three steps: set a 99.9% success target, allow 0.1% failures, and alert when failures use the budget too quickly" width="800">
+  <img src="./images/budget.png" alt="Three steps: set a 99.9% success target, allow 0.1% failures, and alert when failures use the budget too quickly" width="100%">
 </p>
 
 Read the three boxes in the image from left to right:
@@ -34,7 +34,7 @@ You will create two files:
 - **`orders-api-rules.yaml`** provides a Prometheus alert rule for the **14.4x fast-burn threshold**. The alert fires when the error rate exceeds 1.44% in both the 1-hour and 5-minute windows continuously for two minutes.
 
 <p align="center">
-  <img src="./images/what-you-create.png" alt="Deliverables: an SLO document and a YAML rule file with dual-window alert conditions" width="800">
+  <img src="./images/what-you-create.png" alt="Deliverables: an SLO document and a YAML rule file with dual-window alert conditions" width="100%">
 </p>
 
 The diagram also shows a **6x burn-rate rule** as an optional extension. In this lab, you record all three thresholds in the SLO document and implement only the **14.4x rule** in the YAML file.
@@ -42,7 +42,7 @@ The diagram also shows a **6x burn-rate rule** as an optional extension. In this
 ## Which Requests Count? (SLI and SLO)
 
 <p align="center">
-  <img src="./images/which-requests-orginal.png" alt="Which requests count: filter cancellations and health checks to separate good from bad requests" width="800">
+  <img src="./images/which-requests-orginal.png" alt="Which requests count: filter cancellations and health checks to separate good from bad requests" width="100%">
 </p>
 
 When someone uses the online shop, their browser sends a **request** to the API. The API returns a response with a number called an **HTTP status code**. For example, `200` means the request succeeded, and `500` means the server had a problem.
@@ -70,7 +70,7 @@ In this lab, **good means no server error**. A `404` response counts as good bec
 ## When Do We Alert? (Error Budgets and Burn Rate)
 
 <p align="center">
-  <img src="./images/burn-rate-alerting.png" alt="When do we alert: multi-window burn rate thresholds and notification actions" width="800">
+  <img src="./images/burn-rate-alerting.png" alt="When do we alert: multi-window burn rate thresholds and notification actions" width="100%">
 </p>
 
 The **error budget** is the number of bad requests we can have while still meeting the SLO. Our target is 99.9% good requests, so we can allow **0.1% bad requests**:
@@ -203,7 +203,7 @@ python3 calculate-budget.py
 ```
 
 <p align="center">
-  <img src="./images/budget-output.png" alt="Captured calculation output: 10,000 allowed failures, 6,000 remaining, 40% budget used, and 99.96% SLI" width="1000">
+  <img src="./images/budget-output.png" alt="Captured calculation output: 10,000 allowed failures, 6,000 remaining, 40% budget used, and 99.96% SLI" width="100%">
 </p>
 
 **Read the output:** `Allowed failures` is the full budget. `Actual failures` is what we used. `Failures remaining` is what is left. `SLO met: Yes` means the measured good-request percentage is at least the target.
@@ -275,7 +275,7 @@ Fast-alert threshold: `14.4 x 0.1% = 1.44%`. Review tickets the next business da
 Create `orders-api-rules.yaml` in your practice folder. Prometheus monitors metrics, and its query language, PromQL, calculates error rates from request counts.
 
 <p align="center">
-  <img src="./images/fast-alert.png" alt="Fast alert: both 1-hour and 5-minute error rates exceed 1.44% continuously for two minutes" width="800">
+  <img src="./images/fast-alert.png" alt="Fast alert: both 1-hour and 5-minute error rates exceed 1.44% continuously for two minutes" width="100%">
 </p>
 
 ```yaml
@@ -324,7 +324,7 @@ curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prom
 **Explanation:** Downloads the official Prometheus archive containing `promtool`.
 
 <p align="center">
-  <img src="./images/download-output.png" alt="Captured curl output showing the Prometheus archive download reaching 100 percent" width="1000">
+  <img src="./images/download-output.png" alt="Captured curl output showing the Prometheus archive download reaching 100 percent" width="100%">
 </p>
 
 **Read the output:** `100` in the progress line means the download finished. The speed and time will differ on your computer.
@@ -337,7 +337,7 @@ ls prometheus-3.5.0.linux-amd64
 **Explanation:** Extracts only `promtool`, saving space because we do not need the Prometheus server binary. `tar` normally prints nothing on success. The next command, `ls`, lists the extracted folder so you can confirm that `promtool` exists.
 
 <p align="center">
-  <img src="./images/extract-output.png" alt="Captured extraction output: tar completes silently and ls lists promtool" width="1000">
+  <img src="./images/extract-output.png" alt="Captured extraction output: tar completes silently and ls lists promtool" width="100%">
 </p>
 
 **Read the output:** Seeing `promtool` under the `ls` command means the checker is present.
@@ -349,7 +349,7 @@ ls prometheus-3.5.0.linux-amd64
 **Explanation:** Checks the rule syntax without starting a server.
 
 <p align="center">
-  <img src="./images/run-output.png" alt="Check your rule file: promtool check rules outputs SUCCESS" width="800">
+  <img src="./images/run-output.png" alt="Check your rule file: promtool check rules outputs SUCCESS" width="100%">
 </p>
 
 **Read the output:** `Checking orders-api-rules.yaml` identifies the file being checked. `SUCCESS: 1 rules found` means the checker accepted the syntax and found our one fast-burn alert rule.
