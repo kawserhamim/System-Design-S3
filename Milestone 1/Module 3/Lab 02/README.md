@@ -171,6 +171,43 @@ SLO target       = 99.9%
 
 The 6,000 remaining failures apply to this example's request total and window. Recalculate the budget as the rolling window and number of requests change. This is a **request-based budget**, so it counts failed requests, not minutes of downtime.
 
+### Run the calculation yourself
+
+Create `calculate-budget.py` in your practice folder and paste the following code. It calculates the numbers above:
+
+```python
+"""Calculate the request-based error budget used in this lab."""
+
+valid_requests = 10_000_000
+bad_requests = 4_000
+slo = 0.999
+allowed_failures = round(valid_requests * (1 - slo))
+remaining = allowed_failures - bad_requests
+sli = (valid_requests - bad_requests) / valid_requests * 100
+
+print(f"Valid requests:    {valid_requests:,}")
+print(f"SLO target:        {slo * 100:.1f}%")
+print(f"Allowed failures:  {allowed_failures:,}")
+print(f"Actual failures:   {bad_requests:,}")
+print(f"Failures remaining:{remaining:>10,}")
+print(f"Budget used:       {bad_requests / allowed_failures * 100:.0f}%")
+print(f"Budget remaining:  {remaining / allowed_failures * 100:.0f}%")
+print(f"Actual SLI:        {sli:.2f}%")
+print(f"SLO met:           {'Yes' if sli >= slo * 100 else 'No'}")
+```
+
+Open a terminal in your practice folder and run:
+
+```bash
+python3 calculate-budget.py
+```
+
+<p align="center">
+  <img src="./images/budget-output.png" alt="Captured calculation output: 10,000 allowed failures, 6,000 remaining, 40% budget used, and 99.96% SLI" width="1000">
+</p>
+
+**Read the output:** `Allowed failures` is the full budget. `Actual failures` is what we used. `Failures remaining` is what is left. `SLO met: Yes` means the measured good-request percentage is at least the target.
+
 ---
 
 ## Step 3: Set the Burn-Rate Thresholds
@@ -275,7 +312,9 @@ A lookback window is not a fixed waiting period: a large spike can cross both th
 
 ## Step 5: Check the Rule File
 
-This optional step checks the supporting query sketch. On Linux with an x86-64 processor, download Prometheus and use its `promtool` checker to validate the rule file.
+This step checks the YAML rule file. The Markdown file is a document you read; the YAML file contains instructions for Prometheus. Use `promtool` to check those instructions without starting a Prometheus server.
+
+Create `slo-document.md` and `orders-api-rules.yaml` in your practice folder using the examples in Steps 3 and 4. Run the following commands from that folder. These download instructions are for Linux with an x86-64 processor.
 
 ```bash
 # paste this as one line
@@ -284,11 +323,24 @@ curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prom
 
 **Explanation:** Downloads the official Prometheus archive containing `promtool`.
 
+<p align="center">
+  <img src="./images/download-output.png" alt="Captured curl output showing the Prometheus archive download reaching 100 percent" width="1000">
+</p>
+
+**Read the output:** `100` in the progress line means the download finished. The speed and time will differ on your computer.
+
 ```bash
-tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
+tar -xzf prometheus-3.5.0.linux-amd64.tar.gz prometheus-3.5.0.linux-amd64/promtool
+ls prometheus-3.5.0.linux-amd64
 ```
 
-**Explanation:** Extracts the Prometheus binaries to your practice folder.
+**Explanation:** Extracts only `promtool`, saving space because we do not need the Prometheus server binary. `tar` normally prints nothing on success. The next command, `ls`, lists the extracted folder so you can confirm that `promtool` exists.
+
+<p align="center">
+  <img src="./images/extract-output.png" alt="Captured extraction output: tar completes silently and ls lists promtool" width="1000">
+</p>
+
+**Read the output:** Seeing `promtool` under the `ls` command means the checker is present.
 
 ```bash
 ./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
@@ -300,7 +352,11 @@ tar -xzf prometheus-3.5.0.linux-amd64.tar.gz
   <img src="./images/run-output.png" alt="Check your rule file: promtool check rules outputs SUCCESS" width="800">
 </p>
 
-**What to expect:** The output reports `SUCCESS` and one rule found, confirming valid syntax. The diagram uses `promtool` directly; the command above uses the binary from the extracted folder. Sending notifications also requires a running Prometheus setup and notification configuration.
+**Read the output:** `Checking orders-api-rules.yaml` identifies the file being checked. `SUCCESS: 1 rules found` means the checker accepted the syntax and found our one fast-burn alert rule.
+
+These images render output captured from real commands, rather than example results. During capture, the local disk was full, so the downloaded checker was run from memory; the rule-check output comes from the official Prometheus 3.5.0 binary. The displayed checker command uses the normal extracted-folder path for students.
+
+Passing this check does not send an alert or prove that live metrics exist. Sending notifications requires a running Prometheus setup and notification configuration.
 
 ---
 
