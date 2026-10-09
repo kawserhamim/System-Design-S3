@@ -179,6 +179,10 @@ touch availability.py components.csv
 ls
 ```
 
+<p align="center">
+  <img src="./images/file-command.png" alt="Terminal showing mkdir and touch creating the m3-l1 folder and files, followed by ls listing availability.py and components.csv" width="525">
+</p>
+
 **Expected:** `ls` lists `availability.py` and `components.csv`. The first two commands normally print nothing when successful.
 
 <p align="center">
