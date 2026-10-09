@@ -23,11 +23,6 @@ By the end, you will be able to:
 - Calculate availability when **at least one copy must work** (parallel).
 - Combine both designs and explain the resulting downtime.
 
-## Tools and Deliverable
-
-Use **Python 3.8 or newer**, a terminal, and a text editor. No extra Python packages are needed.
-
-You will create `availability.py` and `components.csv`, then use them to produce an availability report. At the end, write a short comparison of the original design and an improved design.
 
 ## 1. Understand Availability and Nines
 
@@ -186,7 +181,6 @@ ls
 
 **Expected:** `ls` lists `availability.py` and `components.csv`. The first two commands normally print nothing when successful.
 
-Keep both files in `m3-l1/`. Run the remaining commands from that folder.
 
 ## Step 2: Write the Calculator
 
