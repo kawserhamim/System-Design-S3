@@ -181,6 +181,11 @@ ls
 
 **Expected:** `ls` lists `availability.py` and `components.csv`. The first two commands normally print nothing when successful.
 
+<p align="center">
+  <img src="./images/create-file.png" alt="VS Code Explorer showing availability.py and components.csv inside the m3-l1 project folder" width="300">
+</p>
+
+**Check your project folder:** Open `m3-l1` in your editor. Both `availability.py` and `components.csv` should appear, as shown above. They are empty until you add the contents in the next steps.
 
 ## Step 2: Write the Calculator
 
