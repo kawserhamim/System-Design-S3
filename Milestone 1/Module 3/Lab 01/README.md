@@ -18,13 +18,7 @@ By the end, you can:
 
 ## Deliverable
 
-<p align="center">
-  <a href="./images/create-file.png">
-    <img src="./images/create-file.png" alt="The m3-l1 folder with availability.py and components.csv" width="300">
-  </a>
-</p>
-
-A calculator in `availability.py` and a design in `components.csv`. A **CSV** is a text table with comma-separated columns. The editor screenshot shows both files in the project folder.
+A calculator in `availability.py` and a design in `components.csv`. A **CSV** is a text table with comma-separated columns.
 
 ## Understand Availability and Nines
 
@@ -118,6 +112,14 @@ ls
 **Explanation:** Creates the project folder and lists its files.
 
 **What to expect:** The first two commands normally print nothing. `ls` lists `availability.py` and `components.csv`; open this folder in your editor.
+
+<p align="center">
+  <a href="./images/create-file.png">
+    <img src="./images/create-file.png" alt="The m3-l1 folder with availability.py and components.csv" width="300">
+  </a>
+</p>
+
+**In your editor:** Open `m3-l1`. The Explorer should show `availability.py` and `components.csv`, as pictured above. Both files are empty until you add their contents in the next steps.
 
 ---
 
