@@ -22,12 +22,6 @@ A calculator in `availability.py` and a design in `components.csv`. A **CSV** is
 
 ## Understand Availability and Nines
 
-<p align="center">
-  <a href="./images/availability-calculation-result.png">
-    <img src="./images/availability-calculation-result.png" alt="Yearly downtime for single, serial, and parallel designs" width="800">
-  </a>
-</p>
-
 **Availability** is working time divided by total time. **Nines** counts the 9s in the percentage. Three nines means 99.9%, or `0.999` in a formula: 999 working minutes out of 1,000.
 
 | Nines | Availability | Downtime per 30-day month | Downtime per 365-day year |
@@ -62,6 +56,22 @@ For independent required parts, multiply their availabilities. Two three-nine pa
 A **replica** is another copy that does the same job. Two alternative apps work as a group if either works. Each fails with probability `0.001`, so both independent apps fail together with probability `0.001 * 0.001`.
 
 Subtract that from one: `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. This covers the app group only. The surviving app must handle the traffic alone. If App 2 stops, App 1 can still serve requests. The group fails only when both stop; that is why we subtract the chance of both failing from one.
+
+## Compare the Designs
+
+<p align="center">
+  <a href="./images/availability-calculation-result.png">
+    <img src="./images/availability-calculation-result.png" alt="Yearly downtime for single, serial, and parallel designs" width="800">
+  </a>
+</p>
+
+All parts in this picture have 99.9% availability. The serial design needs both parts; the parallel group needs only one. Their connections change the expected downtime:
+
+| Design | Availability | Yearly downtime |
+| --- | --- | --- |
+| Single part | 99.9% | 8.76 hours |
+| Two required parts | 99.8001% | 17.51 hours |
+| Two alternative copies | 99.9999% | 31.54 seconds |
 
 ## Combined: Calculate the Group First
 
@@ -206,11 +216,13 @@ if __name__ == "__main__":
 
 ## Step 3: Write the System CSV
 
-```text
-lb group -> api group (two alternatives) -> db group
-```
+<p align="center">
+  <a href="./images/csv-system-output.png">
+    <img src="./images/csv-system-output.png" alt="Original SYSTEM report with 578.63 minutes of yearly downtime" width="800">
+  </a>
+</p>
 
-**Explanation:** The CSV groups describe which parts can replace each other.
+This screenshot shows a sample report for the CSV design below. `SYSTEM` has **99.889910%** availability and **578.63 minutes** of yearly downtime. The demo produces the same values under its combined-design heading.
 
 Save the original design in `components.csv`:
 
@@ -228,18 +240,15 @@ Rows in the same group are alternatives. Different groups are required. Both `ap
 
 ---
 
-## 4. Run the following commands in the terminal
+## 4. Run the following command in the terminal
 
-Run from `m3-l1` after saving both files. `--topology` selects how the parts connect:
+Run from `m3-l1` after saving `availability.py`:
 
 ```bash
 python3 availability.py --demo
-python3 availability.py --nines 3 3 --topology serial
-python3 availability.py --nines 3 3 --topology parallel
-python3 availability.py --csv components.csv
 ```
 
-**Explanation:** Runs the demo, direct formulas, and original CSV model.
+**Explanation:** Runs the four built-in availability examples.
 
 <p align="center">
   <a href="./images/demo-output.png">
@@ -247,15 +256,7 @@ python3 availability.py --csv components.csv
   </a>
 </p>
 
-**What to expect:** Four demo reports show availability, nines, and downtime in minutes. The serial and parallel commands repeat their matching demo results.
-
-<p align="center">
-  <a href="./images/csv-system-output.png">
-    <img src="./images/csv-system-output.png" alt="Original SYSTEM report with 578.63 minutes of yearly downtime" width="800">
-  </a>
-</p>
-
-**What to expect:** `SYSTEM` matches the combined demo. Its `2.958` nines means slightly less than three nines, not 99.958%.
+**What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability, nines, and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
 
 | Design | Availability | Yearly downtime |
 | --- | --- | --- |
@@ -266,21 +267,15 @@ python3 availability.py --csv components.csv
 
 ### Improve the Load Balancer
 
-Replace `LB-1,3,lb` with `LB-1,4,lb` in `components.csv`, then save. This raises its assumed availability from 99.9% to 99.99%:
-
-```bash
-python3 availability.py --csv components.csv
-```
-
-**Explanation:** Recalculates the design with the improved load balancer.
-
 <p align="center">
   <a href="./images/improved-lb-output.png">
     <img src="./images/improved-lb-output.png" alt="Improved SYSTEM report with 105.64 minutes of yearly downtime" width="800">
   </a>
 </p>
 
-**What to expect:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Changing the CSV changes the model; improving a real service needs engineering work.
+The screenshot above shows a design with a four-nine load balancer against the original three-nine design. The apps and database stay the same. This is a separate example, not an extra report from `--demo`.
+
+**Read this example:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Improving a real service needs engineering work.
 
 ---
 

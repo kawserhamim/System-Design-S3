@@ -34,6 +34,8 @@ Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.py`. **
   </a>
 </p>
 
+Read the picture from top to bottom: remove skipped requests, then split the rest into good and bad.
+
 A **service level indicator (SLI)** measures reliability. A **service level objective (SLO)** sets the target: **99.9%** of counted requests without server errors over 30 days.
 
 An **HTTP status code** describes a response. Exclude cancellations (`499`) and health checks (`/healthz`). Count other `2xx`, `3xx`, and `4xx` as good. Codes 500 through 599 (`5xx`) are bad. Good means no server error. For example, 9,996 good requests out of 10,000 gives a **99.96%** SLI, above the **99.9%** SLO. A `404` counts as good here even though the requested item was not found.
