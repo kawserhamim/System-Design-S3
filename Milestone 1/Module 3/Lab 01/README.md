@@ -6,39 +6,35 @@
   </a>
 </p>
 
-Build a Python calculator for a URL shortener, a service that turns long links into short ones. It has a load balancer, which sends requests to app servers, and a database, which stores the links. Compare designs and estimate how long each might be unavailable. This lab calculates a model; it does not start servers.
+Build a Python calculator for a URL shortener, a service that turns long links into short ones. A load balancer sends requests to apps, and a database stores the links. Compare their designs and expected downtime without starting real servers.
 
 ## Objective
 
-By the end of this lab, you can:
+By the end, you can:
 
 - Explain availability and nines.
-- Calculate availability for required parts and alternative copies.
-- Estimate downtime and improve a shared dependency.
+- Calculate required parts and alternative copies.
+- Estimate downtime and improve a shared part.
 
 ## Deliverable
 
 <p align="center">
   <a href="./images/create-file.png">
-    <img src="./images/create-file.png" alt="The m3-l1 folder containing availability.py and components.csv" width="300">
+    <img src="./images/create-file.png" alt="The m3-l1 folder with availability.py and components.csv" width="300">
   </a>
 </p>
 
-A calculator in `availability.py` and a system description in `components.csv`. A **CSV** is a text table with comma-separated columns. The final CSV uses a four-nine load balancer, two three-nine apps, and a four-nine database.
+A calculator in `availability.py` and a design in `components.csv`. A **CSV** is a text table with comma-separated columns. The editor screenshot shows both files in the project folder.
 
 ## Understand Availability and Nines
 
 <p align="center">
   <a href="./images/availability-calculation-result.png">
-    <img src="./images/availability-calculation-result.png" alt="Downtime for a single component, serial parts, and parallel copies" width="800">
+    <img src="./images/availability-calculation-result.png" alt="Yearly downtime for single, serial, and parallel designs" width="800">
   </a>
 </p>
 
-**Availability** is the share of time a service can do its job. Divide working time by total time to calculate it. **Nines** counts the 9s in its percentage. Three nines means 99.9%, written as `0.999` in formulas.
-
-At 99.9% availability, a service works for 999 out of 1,000 minutes. Its unavailable fraction is `1 - 0.999 = 0.001`.
-
-The picture compares required parts with alternative copies. Required parts add failure points; alternative copies can reduce downtime.
+**Availability** is working time divided by total time. **Nines** counts the 9s in the percentage. Three nines means 99.9%, or `0.999` in a formula: 999 working minutes out of 1,000.
 
 | Nines | Availability | Downtime per 30-day month | Downtime per 365-day year |
 | --- | --- | --- | --- |
@@ -47,70 +43,43 @@ The picture compares required parts with alternative copies. Required parts add 
 | 4 | 99.99% | 4.32 minutes | 52.56 minutes |
 | 5 | 99.999% | 0.432 minutes | 5.256 minutes |
 
-Each extra nine reduces expected downtime to one tenth of the previous amount. Multiply the unavailable fraction by the period length: `(1 - 0.999) * 525600 = 525.6` minutes per year. These numbers estimate total downtime. They do not tell you when an outage will happen.
-
-A 30-day month has 43,200 minutes. At three nines, expected downtime is `43,200 * 0.001 = 43.2` minutes.
+Calculate yearly downtime with `(1 - availability) * 525600`. At three nines, this gives **525.6 minutes**. Each extra nine reduces downtime to one tenth; these totals do not predict when outages happen.
 
 ## Serial: Every Part Must Work
 
 <p align="center">
   <a href="./images/serial.png">
-    <img src="./images/serial.png" alt="A failed app breaks the path from load balancer to database" width="800">
+    <img src="./images/serial.png" alt="A failed app stops the request from reaching the database" width="800">
   </a>
 </p>
 
-A load balancer directs requests to an app, which reads the database. All three are required. Multiply their availabilities when failures are independent.
+The request needs the load balancer, app, and database. In the picture, the app is down, so a working database cannot finish the request alone. **Independent failures** means one part failing does not change another part's failure chance.
 
-For two required three-nine parts, `0.999 * 0.999 = 0.998001`, or **99.8001%**. Either part can stop the service. A broken path does not mean every component has stopped.
-
-In the picture, the app is down. Even if the database works, the request cannot finish because it needs the app.
-
-**Independent failures** means one part failing does not change another part's failure chance. The multiplication formula assumes this.
-
-If all three required parts have three nines, `0.999 * 0.999 * 0.999` gives about **99.7003%** availability.
+For independent required parts, multiply their availabilities. Two three-nine parts give `0.999 * 0.999 = 0.998001`, or **99.8001%**. Adding required parts adds ways for the request to fail.
 
 ## Parallel: One Copy Is Enough
 
 <p align="center">
   <a href="./images/parallel.png">
-    <img src="./images/parallel.png" alt="One working app handles requests while the other is down" width="800">
+    <img src="./images/parallel.png" alt="One app handles requests while the other is down" width="800">
   </a>
 </p>
 
-A **replica** is another copy that can do the same job. A parallel group works when at least one copy works. Calculate the chance that all copies fail, then subtract it from one.
+A **replica** is another copy that does the same job. Two alternative apps work as a group if either works. Each fails with probability `0.001`, so both independent apps fail together with probability `0.001 * 0.001`.
 
-Two three-nine copies give `1 - (1 - 0.999) * (1 - 0.999) = 0.999999`, or **99.9999%**. This result covers the app group; the shared load balancer is still required.
+Subtract that from one: `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. This covers the app group only. The surviving app must handle the traffic alone.
 
-Each app fails with probability `0.001`. Both fail together with probability `0.001 * 0.001 = 0.000001`. Subtract this from one to find the chance that at least one works.
-
-The surviving app must do the same job and handle the traffic alone.
-
-The group fails only when both apps are down:
-
-| App 1 | App 2 | App group |
-| --- | --- | --- |
-| Working | Working | Available |
-| Working | Down | Available |
-| Down | Working | Available |
-| Down | Down | Unavailable |
-
-## Combined: Calculate the App Group First
+## Combined: Calculate the Group First
 
 <p align="center">
   <a href="./images/combine.png">
-    <img src="./images/combine.png" alt="Required load balancer, two alternative apps, and required database" width="800">
+    <img src="./images/combine.png" alt="Required load balancer, alternative apps, and required database" width="800">
   </a>
 </p>
 
-A **tier** is a component or group doing one role. Calculate the parallel app tier, then multiply the required tiers: `LB * Apps * DB`. Using three nines for the load balancer and apps, and four for the database, gives **99.889910%**.
+A **tier** is a part or group doing one role. Read the picture as `LB -> (App 1 || App 2) -> DB`; `||` means alternatives. Calculate the app group first, then multiply the required tiers.
 
-Read the picture as `LB -> (App 1 || App 2) -> DB`. Calculate the alternative apps first: `0.999999`. Then multiply `0.999 * 0.999999 * 0.9999`.
-
-A **shared dependency** is a part both apps need. Here, a failed load balancer or database stops both apps.
-
-The model assumes parts fail independently, requests reach working apps, and one app can handle the traffic alone. Two apps on the same failed machine would fail together.
-
-The combined design has **578.63 minutes**, or **9.64 hours**, of expected yearly downtime: `(1 - availability) * 525600`.
+With three nines for the load balancer and apps, and four for the database, `0.999 * 0.999999 * 0.9999` gives **99.889910%**. Both apps need the same load balancer and database, called **shared dependencies**. Either shared part can stop both apps; two apps on one failed machine also fail together.
 
 ## Step 1: Create the Project
 
@@ -120,7 +89,7 @@ The combined design has **578.63 minutes**, or **9.64 hours**, of expected yearl
   </a>
 </p>
 
-Use an Ubuntu/Debian terminal with Python 3.8 or newer. Install Python if needed:
+Use an Ubuntu/Debian terminal. Install Python 3.8 or newer for the calculator:
 
 ```bash
 sudo apt update
@@ -128,13 +97,13 @@ sudo apt install -y python3
 python3 --version
 ```
 
-**Explanation:** Refreshes package information, installs Python, and prints its version.
+**Explanation:** Installs Python and prints its version.
 
-**Command results:** Installation prints progress or says Python is already installed. The version command prints a line such as `Python 3.12.3`; use Python 3.8 or newer.
+**What to expect:** Installation prints progress or says Python is already installed. The version line may differ from the screenshot's `Python 3.12.3`.
 
 <p align="center">
   <a href="./images/file-command.png">
-    <img src="./images/file-command.png" alt="Terminal commands creating m3-l1 and listing both project files" width="525">
+    <img src="./images/file-command.png" alt="Terminal creating the project and listing both files" width="525">
   </a>
 </p>
 
@@ -146,23 +115,21 @@ touch availability.py components.csv
 ls
 ```
 
-**Explanation:** Creates the project and lists `availability.py` and `components.csv`.
+**Explanation:** Creates the project folder and lists its files.
 
-**Command results:** `mkdir`, `cd`, and `touch` normally print nothing. `ls` lists both files, matching the terminal and editor screenshots.
-
-Open `m3-l1` in your editor. Both files are empty until you add their contents.
+**What to expect:** The first two commands normally print nothing. `ls` lists `availability.py` and `components.csv`; open this folder in your editor.
 
 ---
 
 ## Step 2: Write the Calculator
 
-<p align="center">
-  <a href="./images/demo-output.png">
-    <img src="./images/demo-output.png" alt="Reports produced by the availability calculator" width="800">
-  </a>
-</p>
+```text
+Nines -> availability -> serial or parallel formula -> downtime
+```
 
-Paste this complete code into `availability.py`. It uses only Python's built-in libraries.
+**Explanation:** The calculator converts inputs, combines parts, and prints results.
+
+Paste this complete code into `availability.py`. It uses Python's built-in libraries:
 
 ```python
 import argparse
@@ -231,29 +198,19 @@ if __name__ == "__main__":
     main()
 ```
 
-**What this file does:** Converts nines to availability, combines components, and prints expected downtime.
-
-For `--nines 3 3`, the code converts each `3` to `0.999`, applies the chosen formula, and prints the result.
-
-| Function | Job |
-| --- | --- |
-| `probability()` | Converts nines to a decimal |
-| `serial()` | Multiplies required parts |
-| `parallel()` | Combines alternative copies |
-| `read_system()` | Groups CSV components by role |
-| `report()` | Prints availability and downtime |
+**What this file does:** Calculates availability and expected downtime from nines or CSV groups.
 
 ---
 
 ## Step 3: Write the System CSV
 
-<p align="center">
-  <a href="./images/combine.png">
-    <img src="./images/combine.png" alt="The design described by the CSV" width="800">
-  </a>
-</p>
+```text
+lb group -> api group (two alternatives) -> db group
+```
 
-Paste this CSV table into `components.csv`:
+**Explanation:** The CSV groups describe which parts can replace each other.
+
+Save the original design in `components.csv`:
 
 ```csv
 component,nines,group
@@ -263,23 +220,15 @@ API-server-2,3,api
 DB-primary,4,db
 ```
 
-**What this file does:** Describes one required load balancer, two alternative apps, and one required database.
+**What this file does:** Describes the load balancer, two alternative apps, and database.
 
-Rows in the same group are alternatives. Different groups are required tiers. Keep the header, and enter `3` for three nines, not `99.9`.
-
-Both app rows use `api`, so they form one parallel group. The `lb` and `db` groups remain required.
+Rows in the same group are alternatives. Different groups are required. Use `3` for three nines, not `99.9`.
 
 ---
 
-## Step 4: Run the Following Commands in the Terminal
+## 4. Run the following commands in the terminal
 
-<p align="center">
-  <a href="./images/demo-output.png">
-    <img src="./images/demo-output.png" alt="Single, serial, parallel, and combined demo reports" width="800">
-  </a>
-</p>
-
-Run these commands from `m3-l1` after saving both files. `--topology` chooses how the parts connect: serial requires every part, while parallel needs one working copy.
+Run from `m3-l1` after saving both files. `--topology` selects how the parts connect:
 
 ```bash
 python3 availability.py --demo
@@ -288,70 +237,51 @@ python3 availability.py --nines 3 3 --topology parallel
 python3 availability.py --csv components.csv
 ```
 
-**Explanation:** Runs the demo, two direct calculations, and the CSV system model.
-
-**Read each command's result:**
-
-| Command option | Output heading | Meaning |
-| --- | --- | --- |
-| `--demo` | Four labeled reports | Compares single, serial, parallel, and combined designs |
-| `--nines 3 3 --topology serial` | `serial` | Both three-nine parts must work |
-| `--nines 3 3 --topology parallel` | `parallel` | Either three-nine copy can work |
-| `--csv components.csv` | `SYSTEM` | Uses the groups saved in your CSV |
-
-Each demo report shows availability, nines, and monthly and yearly downtime. The parallel result is about 31.54 seconds per year, displayed as `0.53` minutes.
+**Explanation:** Runs the demo, direct formulas, and original CSV model.
 
 <p align="center">
-  <a href="./images/csv-system-output.png">
-    <img src="./images/csv-system-output.png" alt="CSV system report with 578.63 minutes of yearly downtime" width="800">
+  <a href="./images/demo-output.png">
+    <img src="./images/demo-output.png" alt="Demo reports comparing single, serial, parallel, and combined designs" width="800">
   </a>
 </p>
 
-**What to expect:** The original CSV matches the combined demo. The report uses minutes for downtime. A nines value of `2.958` means slightly less than three nines, not 99.958%.
+**What to expect:** Four demo reports show availability, nines, and downtime in minutes. The serial and parallel commands repeat their matching demo results.
+
+<p align="center">
+  <a href="./images/csv-system-output.png">
+    <img src="./images/csv-system-output.png" alt="Original SYSTEM report with 578.63 minutes of yearly downtime" width="800">
+  </a>
+</p>
+
+**What to expect:** `SYSTEM` matches the combined demo. Its `2.958` nines means slightly less than three nines, not 99.958%.
 
 | Design | Availability | Yearly downtime |
 | --- | --- | --- |
 | Single three-nine part | 99.9% | 525.60 minutes |
 | Two required parts | 99.800100% | 1050.67 minutes |
-| Two alternative copies | 99.999900% | 0.53 minutes |
-| Combined original CSV | 99.889910% | 578.63 minutes |
+| Two alternative apps | 99.999900% | 0.53 minutes |
+| Original combined design | 99.889910% | 578.63 minutes |
 
----
+### Improve the Load Balancer
 
-## Step 5: Improve the Load Balancer
-
-<p align="center">
-  <a href="./images/improved-lb-output.png">
-    <img src="./images/improved-lb-output.png" alt="Improved system report with 105.64 minutes of yearly downtime" width="800">
-  </a>
-</p>
-
-Replace `components.csv` with this complete file to give the load balancer four nines:
-
-```csv
-component,nines,group
-LB-1,4,lb
-API-server-1,3,api
-API-server-2,3,api
-DB-primary,4,db
-```
-
-**What this file does:** Improves the load balancer's assumed availability while keeping the apps and database unchanged.
-
-After saving the improved CSV, run this command from `m3-l1`:
+Replace `LB-1,3,lb` with `LB-1,4,lb` in `components.csv`, then save. This raises its assumed availability from 99.9% to 99.99%:
 
 ```bash
 python3 availability.py --csv components.csv
 ```
 
-**Explanation:** Recalculates the system using the improved load balancer value.
+**Explanation:** Recalculates the design with the improved load balancer.
 
-**Read the screenshot:** The improved `SYSTEM` report shows `3.697` nines, `8.68 min/month`, and `105.64 min/year`.
+<p align="center">
+  <a href="./images/improved-lb-output.png">
+    <img src="./images/improved-lb-output.png" alt="Improved SYSTEM report with 105.64 minutes of yearly downtime" width="800">
+  </a>
+</p>
 
-**What to expect:** Availability rises to **99.979901%**. Yearly downtime falls from **578.63 to 105.64 minutes**, about **9.64 to 1.76 hours**. Editing this model changes an assumption; improving a deployed service requires engineering work.
+**What to expect:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Changing the CSV changes the model; improving a real service needs engineering work.
 
 ---
 
 ## Conclusion
 
-Calculate alternative groups first, then multiply required tiers. Shared dependencies can still stop requests even with backup apps. Next, use SLOs and error budgets to decide how much failure your service can allow.
+Calculate alternative groups first, then multiply required parts. Backup apps still depend on shared parts. Next, set reliability targets with SLOs and error budgets.
