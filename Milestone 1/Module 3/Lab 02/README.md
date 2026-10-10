@@ -36,7 +36,15 @@ An Orders API plan in `slo-document.md` and `orders-api-rules.yaml`, plus `calcu
 
 A **service level indicator (SLI)** measures reliability. A **service level objective (SLO)** sets its target. Here, the SLI is the percentage of counted requests without a server error, and the SLO is at least **99.9%** over the most recent 30 days.
 
+The SLI answers, “How reliable was the service?” The SLO answers, “What result are we aiming for?” If 9,996 of 10,000 counted requests are good, the SLI is **99.96%**, so it meets the 99.9% target. If only 9,980 are good, the SLI is **99.8%**, so it falls below the target.
+
+This lab measures responses from the service. In Lab 01, availability measured working time. A request-based SLI gives more weight to periods with more requests; ten failed requests during a busy minute and an idle minute do not imply the same downtime.
+
 An **HTTP status code** describes a response. This lab counts `2xx`, `3xx`, and `4xx` as good and `5xx` as bad. Exclude cancellations (`499`) and health checks (`/healthz`) first. Good means no server error; a `404` does not prove the customer placed an order.
+
+Read the diagram from top to bottom: remove excluded requests, keep the remaining requests, split them into good and bad, then divide good by the total kept. `5xx` means codes from 500 through 599. Excluding `499` first matters because it would otherwise fall inside the `4xx` group.
+
+Health checks ask whether the service is running; they are not customer orders. Keeping them in the denominator could make customer reliability look better than it is. This lab also leaves out client cancellations, so use those exclusions in every calculation.
 
 ## Understand Error Budgets and Burn Rate
 
@@ -48,7 +56,13 @@ An **HTTP status code** describes a response. This lab counts `2xx`, `3xx`, and 
 
 The **error budget** is the allowance for failed requests. A 99.9% target allows **0.1%** failures. **Burn rate** divides the measured failure percentage by this allowance: `1.44% / 0.1% = 14.4x`.
 
+For 1,000 counted requests, a 99.9% target allows one bad request. For 10,000,000 requests, the same percentage allows 10,000. The budget scales with traffic; it is not a fixed number of failures for every month.
+
+A **1x** burn rate means errors are happening at the allowed rate. **14.4x** means they are happening 14.4 times as fast. A service can still meet its 30-day SLO while a recent spike burns the remaining allowance quickly, so burn alerts help the team act before the overall SLI falls below target.
+
 A **window** is the time period we look back over. Both windows must exceed the threshold. A page means an urgent notification; a ticket means a task to review later.
+
+The long window shows whether errors have persisted. The short window shows whether they are still happening now. Suppose the last hour has 2% failures but the last five minutes have only 0.2%: the fast rule does not fire because the service appears to have recovered. If both show 2%, both exceed 1.44% and the two-minute pending period can start.
 
 | Threshold | Long + short window | Failure percentage | Action |
 | --- | --- | --- | --- |
@@ -57,6 +71,8 @@ A **window** is the time period we look back over. Both windows must exceed the 
 | 1x (slow) | 3 days + 6 hours | Above 0.10% | Create ticket |
 
 The diagram's exhaustion times assume steady traffic and errors using a full 30-day allowance. This budget counts failed requests, not downtime.
+
+**Read the burn rate as a pace:** At a steady 1.44% failure rate, the service uses an allowance equal to the full 30-day budget in `30 / 14.4`, about **2.08 days**. At 0.60%, the rate is `0.60 / 0.10 = 6x`, giving **five days** under the same assumptions. These examples explain the diagram's timing; they do not predict the time left for a changing workload.
 
 ## Step 1: Define Good and Bad Requests
 
@@ -77,6 +93,8 @@ Use these rules throughout. Save them in Step 3.
 | Any `/healthz` request | Skip | Health check |
 
 Use `SLI = good / (good + bad) * 100`. For 999 good and one bad request, the SLI is **99.9%**.
+
+**Counting example:** Start with 1,000 recorded requests. Exclude 20 health checks and 10 cancellations, leaving 970 counted requests. If 965 are good and five are bad, the SLI is `965 / 970 * 100`, about **99.4845%**. Use 970 in the denominator because the excluded requests belong in neither the good nor bad count.
 
 ---
 
@@ -99,6 +117,8 @@ mkdir -p m3-l2 && cd m3-l2
 **Command result:** A successful command normally prints nothing. The terminal is now inside `m3-l2`; save all three files there so the later commands can find them.
 
 Use **10,000,000** counted requests and **4,000** server errors over the most recent 30 days. This is a **rolling window**: tomorrow's calculation adds the newest day and drops the oldest.
+
+The budget does not reset on the first day of the calendar month. As old requests leave the window and new requests enter it, both the allowed failures and actual failures can change. With these inputs, 4,000 errors use 40% of the 10,000-failure allowance, leaving 6,000; they are only 0.04% of all 10,000,000 counted requests.
 
 Paste this complete code into `calculate-budget.py`:
 
@@ -134,6 +154,10 @@ print(f"SLO met:           {'Yes' if sli >= slo * 100 else 'No'}")
 | Actual SLI | 9,996,000 / 10,000,000 * 100 | 99.96% |
 
 Recalculate when the request total or window changes.
+
+**Two different percentages:** The actual failure percentage is `4,000 / 10,000,000 * 100 = 0.04%`. The budget-used percentage is `4,000 / 10,000 * 100 = 40%`. They use different denominators: all counted requests versus allowed failures. A small failure percentage can still use a large part of a tight budget.
+
+If failures rose to 12,000 with the same request total, budget used would become **120%** and remaining failures would become **-2,000**. A negative result means the service exceeded its allowance by 2,000 failures. The SLI would be **99.88%**, below the 99.9% target.
 
 ---
 
@@ -225,6 +249,14 @@ groups:
 **What this file does:** Defines an alert when both error percentages stay above 1.44% for two minutes.
 
 The rule expects a request counter named `http_requests_total` with `job`, `code`, and `route` labels. `rate()` handles counter resets. `for: 2m` starts a pending period after both conditions become true; either falling below the threshold cancels it.
+
+`http_requests_total` is a **counter**, a measurement that increases as requests arrive. `rate()` estimates requests per second over each window, and `sum()` combines matching series. Dividing good-request rate by total-request rate gives the good fraction; subtracting it from one gives the error fraction.
+
+The filters exclude `499` and `/healthz` from both counts, and exclude `5xx` from the good count. The comparison uses `0.0144`, the decimal form of 1.44%. `and` requires both window conditions, while `for: 2m` requires that combined condition to stay true across rule evaluations for two minutes. The `severity: page` label helps configured notification routing identify urgent alerts.
+
+**Work through one query:** Suppose the total request rate is 100 requests per second and the good rate is 98. The good fraction is `98 / 100 = 0.98`, so the error fraction is `1 - 0.98 = 0.02`, or **2%**. Since `0.02 > 0.0144`, that window exceeds the fast threshold. Prometheus repeats the calculation for both windows before applying the two-minute condition.
+
+**Follow the alert over time:** When both windows first exceed the threshold, the alert becomes pending. If they remain above it for two minutes across evaluations, it becomes firing. If either window drops to or below 1.44% during that period, the pending condition clears. A later increase starts a new pending period.
 
 Lookback windows are not fixed waiting periods. Traffic and evaluation intervals affect detection. Notifications require a running Prometheus setup and notification configuration.
 

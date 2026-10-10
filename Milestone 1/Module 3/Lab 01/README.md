@@ -36,6 +36,10 @@ A calculator in `availability.py` and a system description in `components.csv`. 
 
 **Availability** is the fraction of time a service can do its job: uptime divided by total time. **Nines** counts the 9s in its percentage. Three nines means 99.9%, written as `0.999` in formulas.
 
+Think of a service observed for 1,000 minutes. At 99.9% availability, it works for 999 minutes and is unavailable for one minute. The unavailable fraction is `1 - 0.999 = 0.001`. This is why the calculator multiplies `0.001` by the number of minutes in a month or year.
+
+The comparison picture holds each component's availability constant and changes how the components connect. It shows why two required parts can increase downtime while two alternative copies can reduce it.
+
 | Nines | Availability | Downtime per 30-day month | Downtime per 365-day year |
 | --- | --- | --- | --- |
 | 2 | 99% | 432 minutes | 5,256 minutes |
@@ -44,6 +48,8 @@ A calculator in `availability.py` and a system description in `components.csv`. 
 | 5 | 99.999% | 0.432 minutes | 5.256 minutes |
 
 Each extra nine reduces expected downtime tenfold. Multiply the unavailable fraction by the period length: `(1 - 0.999) * 525600 = 525.6` minutes per year. These are estimates, not outage schedules.
+
+**Work through the units:** A 30-day month has `30 * 24 * 60 = 43,200` minutes. At three nines, `43,200 * 0.001 = 43.2` minutes of expected downtime. The same availability over a longer period produces more downtime minutes, which is why the monthly and yearly numbers differ.
 
 ## Serial: Every Part Must Work
 
@@ -57,6 +63,12 @@ A load balancer directs requests to an app, which reads the database. All three 
 
 For two required three-nine parts, `0.999 * 0.999 = 0.998001`, or **99.8001%**. Either part can stop the service. A broken path does not mean every component has stopped.
 
+Follow the picture from left to right. The load balancer receives the short-link request, the app looks up the destination, and the database stores that destination. If the app is down, a healthy database cannot complete the request by itself. Serial describes required dependencies, not simply the order in which code runs.
+
+**Independent failures** means one component failing does not change the chance that another fails. Under that assumption, multiply the chance that A works by the chance that B works. Adding a required component adds another way for the whole request to fail.
+
+**Three-part example:** If the load balancer, app, and database each have three nines, their combined availability is `0.999 * 0.999 * 0.999 = 0.997002999`, or about **99.7003%**. The system is less available than any single part because all three must work at the same time. Multiplication counts that overlap without counting simultaneous outages twice.
+
 ## Parallel: One Copy Is Enough
 
 <p align="center">
@@ -69,6 +81,21 @@ A **replica** is another copy that can do the same job. A parallel group works w
 
 Two three-nine copies give `1 - (1 - 0.999) * (1 - 0.999) = 0.999999`, or **99.9999%**. This result covers the app group; the shared load balancer is still required.
 
+In the picture, App 2 is down but App 1 can still handle requests. Each app has a failure probability of `0.001`. Both independent apps fail together with probability `0.001 * 0.001 = 0.000001`; subtracting that from one gives the chance that at least one works.
+
+The surviving app must be able to do the same job and handle the incoming traffic. If it cannot access the needed data, or cannot handle the load alone, merely adding a second copy does not produce this modeled benefit.
+
+**Why subtract from one?** With two apps, the group can be in four states. “At least one works” includes three of them. It is easier to calculate the one state where neither works and subtract its probability from the total probability, which is one.
+
+| App 1 | App 2 | App group |
+| --- | --- | --- |
+| Working | Working | Available |
+| Working | Down | Available |
+| Down | Working | Available |
+| Down | Down | Unavailable |
+
+These states are not equally likely. The multiplication formula supplies the probability of the last state.
+
 ## Combined: Calculate the App Group First
 
 <p align="center">
@@ -79,7 +106,13 @@ Two three-nine copies give `1 - (1 - 0.999) * (1 - 0.999) = 0.999999`, or **99.9
 
 A **tier** is a component or group doing one role. Calculate the parallel app tier, then multiply the required tiers: `LB * Apps * DB`. Using three nines for the load balancer and apps, and four for the database, gives **99.889910%**.
 
+Read the combined picture as `LB -> (App 1 || App 2) -> DB`. The `||` means either app can work, while the arrows connect required tiers. First replace the two apps with their group availability, `0.999999`. Then calculate `0.999 * 0.999999 * 0.9999` for the whole request path.
+
+A **shared dependency** is a part that both app copies need. Here, both depend on the same load balancer and database. Improving the app group cannot prevent an outage in either shared part, which explains why the whole system has fewer nines than the app group.
+
 These formulas assume independent failures, routing to healthy copies, and enough capacity in a surviving copy. Two apps on one failed machine would fail together. Backup apps cannot remove failures in shared dependencies.
+
+**Turn the combined result into downtime:** The unavailable fraction is about `1 - 0.9988991011 = 0.0011008989`. Multiply it by `525,600` minutes to get **578.63 minutes per year**. Divide by 60 to get **9.64 hours**. The calculator follows the same steps after combining the tiers.
 
 ## Step 1: Create the Project
 
@@ -209,6 +242,8 @@ if __name__ == "__main__":
 
 **What this file does:** Converts nines to availability, combines components, and prints expected downtime.
 
+**How an input moves through the code:** `--nines 3 3` supplies two values. `probability(3)` converts each to `1 - 10 ** -3 = 0.999`. The selected topology applies either `serial()` or `parallel()`, then `report()` converts the result into a percentage and downtime. `math.prod()` multiplies all values in a group, so the same functions also work with more than two components.
+
 | Function | Job |
 | --- | --- |
 | `probability()` | Converts nines to a decimal |
@@ -240,6 +275,8 @@ DB-primary,4,db
 **What this file does:** Describes one required load balancer, two alternative apps, and one required database.
 
 Rows in the same group are alternatives. Different groups are required tiers. Keep the header, and enter `3` for three nines, not `99.9`.
+
+For example, both `API-server` rows use `api`, so the calculator combines them with the parallel formula. The single `lb` and `db` rows each form their own required group. The group names describe roles; changing an app's group to `db` would incorrectly tell the model that it can replace the database.
 
 ---
 
