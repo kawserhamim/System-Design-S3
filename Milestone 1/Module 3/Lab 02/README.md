@@ -96,6 +96,8 @@ mkdir -p m3-l2 && cd m3-l2
 
 **Explanation:** Creates and opens the folder for this lab's files.
 
+**Command result:** A successful command normally prints nothing. The terminal is now inside `m3-l2`; save all three files there so the later commands can find them.
+
 Use **10,000,000** counted requests and **4,000** server errors over the most recent 30 days. This is a **rolling window**: tomorrow's calculation adds the newest day and drops the oldest.
 
 Paste this complete code into `calculate-budget.py`:
@@ -245,6 +247,64 @@ python3 calculate-budget.py
 **Explanation:** Prints the error budget and actual SLI for this lab's request counts.
 
 **What to expect:** The output shows **10,000** allowed failures, **6,000** remaining, and **40%** budget used. `SLO met: Yes` means the measured **99.96%** is above the **99.9%** target. The YAML file defines the alert; running this calculator does not send notifications.
+
+**Read the output:** `Valid requests` is the total after exclusions. `Actual failures` is the number of server errors. `Failures remaining` subtracts those errors from the allowance. `Budget remaining: 60%` and `Budget used: 40%` describe the same allowance; `Actual SLI: 99.96%` describes good requests out of all counted requests.
+
+### Download the Rule Tool
+
+<p align="center">
+  <a href="./images/download-output.png">
+    <img src="./images/download-output.png" alt="Prometheus archive download in progress at 11 percent" width="900">
+  </a>
+</p>
+
+The remaining screenshots show commands using `promtool`, the rule-file tool included with Prometheus. These instructions use the screenshot's Prometheus 3.5.0 release on Linux with an x86-64 processor. Stay in `m3-l2`. You need `curl` and `tar` installed.
+
+```bash
+# paste this as one line
+curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
+```
+
+**Explanation:** Downloads the archive containing the rule tool into the current folder.
+
+**Command result:** The progress table shows received bytes, speed, and time. `download-output.png` captures the transfer at **11%**, with about **12.8 MB** received out of **115 MB**. Wait for the received percentage to reach `100` and the prompt to return before extracting. Your speed and timing will differ.
+
+### Extract the Tool
+
+<p align="center">
+  <a href="./images/extract-output.png">
+    <img src="./images/extract-output.png" alt="Extraction command and the promtool filename" width="900">
+  </a>
+</p>
+
+```bash
+# paste the tar command as one line
+tar -xzf prometheus-3.5.0.linux-amd64.tar.gz prometheus-3.5.0.linux-amd64/promtool
+ls prometheus-3.5.0.linux-amd64
+```
+
+**Explanation:** Extracts only `promtool`, then lists the folder containing it.
+
+**Command result:** `tar` normally completes without output. `ls` prints `promtool`. The screenshot shows the long extraction command wrapping at the filename; keep it as one command when pasting. The `promtool` entry identifies the extracted executable.
+
+### Run the Rule Tool
+
+<p align="center">
+  <a href="./images/run-output.png">
+    <img src="./images/run-output.png" alt="Rule tool output showing Checking orders-api-rules.yaml and SUCCESS: 1 rules found" width="900">
+  </a>
+</p>
+
+Run this from `m3-l2`, where you saved `orders-api-rules.yaml`:
+
+```bash
+./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
+```
+
+**Explanation:** Loads the YAML rule file and reports whether its rule syntax is accepted.
+
+**Command result:** `Checking orders-api-rules.yaml` names the file being read. `SUCCESS: 1 rules found` means the tool accepted the one fast-burn rule. The screenshot uses a different practice-folder path; use your `m3-l2` folder. This command does not run the alert against live traffic or send a notification.
+
 
 ---
 

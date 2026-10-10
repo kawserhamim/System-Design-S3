@@ -99,6 +99,8 @@ python3 --version
 
 **Explanation:** Refreshes package information, installs Python, and prints its version.
 
+**Command results:** `apt update` prints repository information. `apt install` reports installation progress or says Python is already installed. `python3 --version` prints one line, such as `Python 3.12.3` in the screenshot; any version from 3.8 onward works here.
+
 <p align="center">
   <a href="./images/file-command.png">
     <img src="./images/file-command.png" alt="Terminal commands creating m3-l1 and listing both project files" width="525">
@@ -114,6 +116,8 @@ ls
 ```
 
 **Explanation:** Creates the project and lists `availability.py` and `components.csv`.
+
+**Command results:** `mkdir`, `cd`, and `touch` normally print nothing when successful. `ls` lists `availability.py` and `components.csv`, as shown in `file-command.png`. The prompt changes to `m3-l1`, showing that the terminal is inside the project folder. The editor view in `create-file.png` shows the same files.
 
 Open `m3-l1` in your editor. Both files are empty until you add their contents.
 
@@ -258,6 +262,17 @@ python3 availability.py --csv components.csv
 
 **Explanation:** Runs the demo, two direct calculations, and the CSV system model.
 
+**Read each command's result:**
+
+| Command option | Output heading | Meaning |
+| --- | --- | --- |
+| `--demo` | Four labeled reports | Compares single, serial, parallel, and combined designs |
+| `--nines 3 3 --topology serial` | `serial` | Both three-nine parts must work |
+| `--nines 3 3 --topology parallel` | `parallel` | Either three-nine copy can work |
+| `--csv components.csv` | `SYSTEM` | Uses the groups saved in your CSV |
+
+In `demo-output.png`, each report prints availability, equivalent nines, and downtime for a 30-day month and 365-day year. The parallel report rounds yearly downtime to `0.53` minutes, about 31.54 seconds before rounding. The combined result is lower because the load balancer and database remain required.
+
 <p align="center">
   <a href="./images/csv-system-output.png">
     <img src="./images/csv-system-output.png" alt="CSV system report with 578.63 minutes of yearly downtime" width="800">
@@ -295,7 +310,15 @@ DB-primary,4,db
 
 **What this file does:** Improves the load balancer's assumed availability while keeping the apps and database unchanged.
 
-Rerun the CSV command from Step 4.
+After saving the improved CSV, run this command from `m3-l1`:
+
+```bash
+python3 availability.py --csv components.csv
+```
+
+**Explanation:** Recalculates the system using the improved load balancer value.
+
+**Read the screenshot:** `SYSTEM` identifies the CSV report. The improved result has about `3.697` nines and `8.68 min/month`. The yearly line shows `105.64 min/year`; the app group has not changed.
 
 **What to expect:** Availability rises to **99.979901%**. Yearly downtime falls from **578.63 to 105.64 minutes**, about **9.64 to 1.76 hours**. Editing this model changes an assumption; improving a deployed service requires engineering work.
 
