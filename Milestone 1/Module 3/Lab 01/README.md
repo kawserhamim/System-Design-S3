@@ -36,9 +36,9 @@ A calculator in `availability.py` and a system description in `components.csv`. 
 
 **Availability** is the fraction of time a service can do its job: uptime divided by total time. **Nines** counts the 9s in its percentage. Three nines means 99.9%, written as `0.999` in formulas.
 
-Think of a service observed for 1,000 minutes. At 99.9% availability, it works for 999 minutes and is unavailable for one minute. The unavailable fraction is `1 - 0.999 = 0.001`. This is why the calculator multiplies `0.001` by the number of minutes in a month or year.
+At 99.9% availability, a service works for 999 out of 1,000 minutes. Its unavailable fraction is `1 - 0.999 = 0.001`.
 
-The comparison picture holds each component's availability constant and changes how the components connect. It shows why two required parts can increase downtime while two alternative copies can reduce it.
+The picture compares required parts with alternative copies. Required parts add failure points; alternative copies can reduce downtime.
 
 | Nines | Availability | Downtime per 30-day month | Downtime per 365-day year |
 | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ The comparison picture holds each component's availability constant and changes 
 
 Each extra nine reduces expected downtime tenfold. Multiply the unavailable fraction by the period length: `(1 - 0.999) * 525600 = 525.6` minutes per year. These are estimates, not outage schedules.
 
-**Work through the units:** A 30-day month has `30 * 24 * 60 = 43,200` minutes. At three nines, `43,200 * 0.001 = 43.2` minutes of expected downtime. The same availability over a longer period produces more downtime minutes, which is why the monthly and yearly numbers differ.
+A 30-day month has 43,200 minutes. At three nines, expected downtime is `43,200 * 0.001 = 43.2` minutes.
 
 ## Serial: Every Part Must Work
 
@@ -63,11 +63,11 @@ A load balancer directs requests to an app, which reads the database. All three 
 
 For two required three-nine parts, `0.999 * 0.999 = 0.998001`, or **99.8001%**. Either part can stop the service. A broken path does not mean every component has stopped.
 
-Follow the picture from left to right. The load balancer receives the short-link request, the app looks up the destination, and the database stores that destination. If the app is down, a healthy database cannot complete the request by itself. Serial describes required dependencies, not simply the order in which code runs.
+In the picture, the app is down. Even if the database works, the request cannot finish because it needs the app.
 
-**Independent failures** means one component failing does not change the chance that another fails. Under that assumption, multiply the chance that A works by the chance that B works. Adding a required component adds another way for the whole request to fail.
+**Independent failures** means one part failing does not change another part's failure chance. The multiplication formula assumes this.
 
-**Three-part example:** If the load balancer, app, and database each have three nines, their combined availability is `0.999 * 0.999 * 0.999 = 0.997002999`, or about **99.7003%**. The system is less available than any single part because all three must work at the same time. Multiplication counts that overlap without counting simultaneous outages twice.
+If all three required parts have three nines, `0.999 * 0.999 * 0.999` gives about **99.7003%** availability.
 
 ## Parallel: One Copy Is Enough
 
@@ -81,11 +81,11 @@ A **replica** is another copy that can do the same job. A parallel group works w
 
 Two three-nine copies give `1 - (1 - 0.999) * (1 - 0.999) = 0.999999`, or **99.9999%**. This result covers the app group; the shared load balancer is still required.
 
-In the picture, App 2 is down but App 1 can still handle requests. Each app has a failure probability of `0.001`. Both independent apps fail together with probability `0.001 * 0.001 = 0.000001`; subtracting that from one gives the chance that at least one works.
+Each app fails with probability `0.001`. Both fail together with probability `0.001 * 0.001 = 0.000001`. Subtract this from one to find the chance that at least one works.
 
-The surviving app must be able to do the same job and handle the incoming traffic. If it cannot access the needed data, or cannot handle the load alone, merely adding a second copy does not produce this modeled benefit.
+The surviving app must do the same job and handle the traffic alone.
 
-**Why subtract from one?** With two apps, the group can be in four states. “At least one works” includes three of them. It is easier to calculate the one state where neither works and subtract its probability from the total probability, which is one.
+The group fails only when both apps are down:
 
 | App 1 | App 2 | App group |
 | --- | --- | --- |
@@ -93,8 +93,6 @@ The surviving app must be able to do the same job and handle the incoming traffi
 | Working | Down | Available |
 | Down | Working | Available |
 | Down | Down | Unavailable |
-
-These states are not equally likely. The multiplication formula supplies the probability of the last state.
 
 ## Combined: Calculate the App Group First
 
@@ -106,13 +104,13 @@ These states are not equally likely. The multiplication formula supplies the pro
 
 A **tier** is a component or group doing one role. Calculate the parallel app tier, then multiply the required tiers: `LB * Apps * DB`. Using three nines for the load balancer and apps, and four for the database, gives **99.889910%**.
 
-Read the combined picture as `LB -> (App 1 || App 2) -> DB`. The `||` means either app can work, while the arrows connect required tiers. First replace the two apps with their group availability, `0.999999`. Then calculate `0.999 * 0.999999 * 0.9999` for the whole request path.
+Read the picture as `LB -> (App 1 || App 2) -> DB`. Calculate the alternative apps first: `0.999999`. Then multiply `0.999 * 0.999999 * 0.9999`.
 
-A **shared dependency** is a part that both app copies need. Here, both depend on the same load balancer and database. Improving the app group cannot prevent an outage in either shared part, which explains why the whole system has fewer nines than the app group.
+A **shared dependency** is a part both apps need. Here, a failed load balancer or database stops both apps.
 
-These formulas assume independent failures, routing to healthy copies, and enough capacity in a surviving copy. Two apps on one failed machine would fail together. Backup apps cannot remove failures in shared dependencies.
+The model assumes independent failures, routing to healthy apps, and enough capacity. Two apps on the same failed machine would fail together.
 
-**Turn the combined result into downtime:** The unavailable fraction is about `1 - 0.9988991011 = 0.0011008989`. Multiply it by `525,600` minutes to get **578.63 minutes per year**. Divide by 60 to get **9.64 hours**. The calculator follows the same steps after combining the tiers.
+The combined design has **578.63 minutes**, or **9.64 hours**, of expected yearly downtime: `(1 - availability) * 525600`.
 
 ## Step 1: Create the Project
 
@@ -132,7 +130,7 @@ python3 --version
 
 **Explanation:** Refreshes package information, installs Python, and prints its version.
 
-**Command results:** `apt update` prints repository information. `apt install` reports installation progress or says Python is already installed. `python3 --version` prints one line, such as `Python 3.12.3` in the screenshot; any version from 3.8 onward works here.
+**Command results:** Installation prints progress or says Python is already installed. The version command prints a line such as `Python 3.12.3`; use Python 3.8 or newer.
 
 <p align="center">
   <a href="./images/file-command.png">
@@ -150,7 +148,7 @@ ls
 
 **Explanation:** Creates the project and lists `availability.py` and `components.csv`.
 
-**Command results:** `mkdir`, `cd`, and `touch` normally print nothing when successful. `ls` lists `availability.py` and `components.csv`, as shown in `file-command.png`. The prompt changes to `m3-l1`, showing that the terminal is inside the project folder. The editor view in `create-file.png` shows the same files.
+**Command results:** `mkdir`, `cd`, and `touch` normally print nothing. `ls` lists both files, matching the terminal and editor screenshots.
 
 Open `m3-l1` in your editor. Both files are empty until you add their contents.
 
@@ -171,20 +169,16 @@ import argparse
 import csv
 import math
 
-
 def probability(nines):
     if not math.isfinite(nines) or not 1 <= nines <= 9:
         raise ValueError("nines must be between 1 and 9")
     return 1 - 10 ** -nines
 
-
 def serial(values):
     return math.prod(values)
 
-
 def parallel(values):
     return 1 - math.prod(1 - value for value in values)
-
 
 def report(label, value):
     downtime = 1 - value
@@ -195,7 +189,6 @@ def report(label, value):
     print(f"  downtime:     {downtime * 43200:.2f} min/month")
     print(f"                {downtime * 525600:.2f} min/year")
     print()
-
 
 def read_system(path):
     groups = {}
@@ -208,7 +201,6 @@ def read_system(path):
     if not groups:
         raise ValueError("CSV must contain components")
     return serial(parallel(copies) for copies in groups.values())
-
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate system availability")
@@ -235,14 +227,13 @@ def main():
     except (ValueError, KeyError, OSError) as error:
         parser.error(str(error))
 
-
 if __name__ == "__main__":
     main()
 ```
 
 **What this file does:** Converts nines to availability, combines components, and prints expected downtime.
 
-**How an input moves through the code:** `--nines 3 3` supplies two values. `probability(3)` converts each to `1 - 10 ** -3 = 0.999`. The selected topology applies either `serial()` or `parallel()`, then `report()` converts the result into a percentage and downtime. `math.prod()` multiplies all values in a group, so the same functions also work with more than two components.
+For `--nines 3 3`, the code converts each `3` to `0.999`, applies the chosen formula, and prints the result.
 
 | Function | Job |
 | --- | --- |
@@ -276,7 +267,7 @@ DB-primary,4,db
 
 Rows in the same group are alternatives. Different groups are required tiers. Keep the header, and enter `3` for three nines, not `99.9`.
 
-For example, both `API-server` rows use `api`, so the calculator combines them with the parallel formula. The single `lb` and `db` rows each form their own required group. The group names describe roles; changing an app's group to `db` would incorrectly tell the model that it can replace the database.
+Both app rows use `api`, so they form one parallel group. The `lb` and `db` groups remain required.
 
 ---
 
@@ -308,7 +299,7 @@ python3 availability.py --csv components.csv
 | `--nines 3 3 --topology parallel` | `parallel` | Either three-nine copy can work |
 | `--csv components.csv` | `SYSTEM` | Uses the groups saved in your CSV |
 
-In `demo-output.png`, each report prints availability, equivalent nines, and downtime for a 30-day month and 365-day year. The parallel report rounds yearly downtime to `0.53` minutes, about 31.54 seconds before rounding. The combined result is lower because the load balancer and database remain required.
+Each demo report shows availability, nines, and monthly and yearly downtime. The parallel result is about 31.54 seconds per year, displayed as `0.53` minutes.
 
 <p align="center">
   <a href="./images/csv-system-output.png">
@@ -355,7 +346,7 @@ python3 availability.py --csv components.csv
 
 **Explanation:** Recalculates the system using the improved load balancer value.
 
-**Read the screenshot:** `SYSTEM` identifies the CSV report. The improved result has about `3.697` nines and `8.68 min/month`. The yearly line shows `105.64 min/year`; the app group has not changed.
+**Read the screenshot:** The improved `SYSTEM` report shows `3.697` nines, `8.68 min/month`, and `105.64 min/year`.
 
 **What to expect:** Availability rises to **99.979901%**. Yearly downtime falls from **578.63 to 105.64 minutes**, about **9.64 to 1.76 hours**. Editing this model changes an assumption; improving a deployed service requires engineering work.
 

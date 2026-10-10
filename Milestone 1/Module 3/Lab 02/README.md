@@ -36,15 +36,15 @@ An Orders API plan in `slo-document.md` and `orders-api-rules.yaml`, plus `calcu
 
 A **service level indicator (SLI)** measures reliability. A **service level objective (SLO)** sets its target. Here, the SLI is the percentage of counted requests without a server error, and the SLO is at least **99.9%** over the most recent 30 days.
 
-The SLI answers, “How reliable was the service?” The SLO answers, “What result are we aiming for?” If 9,996 of 10,000 counted requests are good, the SLI is **99.96%**, so it meets the 99.9% target. If only 9,980 are good, the SLI is **99.8%**, so it falls below the target.
+The SLI is the measured result; the SLO is the target. If 9,996 of 10,000 requests are good, the SLI is **99.96%**, above the **99.9%** target.
 
-This lab measures responses from the service. In Lab 01, availability measured working time. A request-based SLI gives more weight to periods with more requests; ten failed requests during a busy minute and an idle minute do not imply the same downtime.
+Lab 01 measures working time. This lab measures good requests, so busy periods count more than quiet periods.
 
 An **HTTP status code** describes a response. This lab counts `2xx`, `3xx`, and `4xx` as good and `5xx` as bad. Exclude cancellations (`499`) and health checks (`/healthz`) first. Good means no server error; a `404` does not prove the customer placed an order.
 
-Read the diagram from top to bottom: remove excluded requests, keep the remaining requests, split them into good and bad, then divide good by the total kept. `5xx` means codes from 500 through 599. Excluding `499` first matters because it would otherwise fall inside the `4xx` group.
+Read the diagram from top to bottom: exclude skipped requests, split the rest into good and bad, then divide good by the total. `5xx` means codes 500 through 599.
 
-Health checks ask whether the service is running; they are not customer orders. Keeping them in the denominator could make customer reliability look better than it is. This lab also leaves out client cancellations, so use those exclusions in every calculation.
+Health checks are not customer orders, and `499` means the client cancelled. Exclude both before counting good and bad requests.
 
 ## Understand Error Budgets and Burn Rate
 
@@ -56,13 +56,13 @@ Health checks ask whether the service is running; they are not customer orders. 
 
 The **error budget** is the allowance for failed requests. A 99.9% target allows **0.1%** failures. **Burn rate** divides the measured failure percentage by this allowance: `1.44% / 0.1% = 14.4x`.
 
-For 1,000 counted requests, a 99.9% target allows one bad request. For 10,000,000 requests, the same percentage allows 10,000. The budget scales with traffic; it is not a fixed number of failures for every month.
+A 99.9% target allows one failure per 1,000 counted requests, or 10,000 per 10,000,000 requests.
 
-A **1x** burn rate means errors are happening at the allowed rate. **14.4x** means they are happening 14.4 times as fast. A service can still meet its 30-day SLO while a recent spike burns the remaining allowance quickly, so burn alerts help the team act before the overall SLI falls below target.
+At **1x**, errors use the budget at the allowed rate. At **14.4x**, they use it 14.4 times as fast. Alerts help the team respond before the 30-day target is missed.
 
 A **window** is the time period we look back over. Both windows must exceed the threshold. A page means an urgent notification; a ticket means a task to review later.
 
-The long window shows whether errors have persisted. The short window shows whether they are still happening now. Suppose the last hour has 2% failures but the last five minutes have only 0.2%: the fast rule does not fire because the service appears to have recovered. If both show 2%, both exceed 1.44% and the two-minute pending period can start.
+The long window checks persistent errors; the short window checks current errors. If the hour shows 2% but the last five minutes show 0.2%, the fast alert does not start. Both must exceed 1.44%.
 
 | Threshold | Long + short window | Failure percentage | Action |
 | --- | --- | --- | --- |
@@ -72,7 +72,7 @@ The long window shows whether errors have persisted. The short window shows whet
 
 The diagram's exhaustion times assume steady traffic and errors using a full 30-day allowance. This budget counts failed requests, not downtime.
 
-**Read the burn rate as a pace:** At a steady 1.44% failure rate, the service uses an allowance equal to the full 30-day budget in `30 / 14.4`, about **2.08 days**. At 0.60%, the rate is `0.60 / 0.10 = 6x`, giving **five days** under the same assumptions. These examples explain the diagram's timing; they do not predict the time left for a changing workload.
+With steady traffic and errors, `30 / 14.4` gives about **2.08 days** to use a full 30-day allowance. This is not a prediction of the budget currently remaining.
 
 ## Step 1: Define Good and Bad Requests
 
@@ -94,17 +94,18 @@ Use these rules throughout. Save them in Step 3.
 
 Use `SLI = good / (good + bad) * 100`. For 999 good and one bad request, the SLI is **99.9%**.
 
-**Counting example:** Start with 1,000 recorded requests. Exclude 20 health checks and 10 cancellations, leaving 970 counted requests. If 965 are good and five are bad, the SLI is `965 / 970 * 100`, about **99.4845%**. Use 970 in the denominator because the excluded requests belong in neither the good nor bad count.
+**Example:** Exclude 30 requests from 1,000, leaving 970. With 965 good and five bad, the SLI is `965 / 970 * 100 = 99.4845%`. Skipped requests are not in the denominator.
 
 ---
 
 ## Step 2: Write the Budget Calculator
 
-<p align="center">
-  <a href="./images/budget-output.png">
-    <img src="./images/budget-output.png" alt="Budget calculation showing 10,000 allowed failures and 6,000 remaining" width="800">
-  </a>
-</p>
+```text
+Counted requests * allowed failure fraction = error budget
+Error budget - actual failures = remaining allowance
+```
+
+**Explanation:** The calculator first finds the allowance, then subtracts the failures already recorded.
 
 Create a practice folder in your terminal:
 
@@ -118,7 +119,7 @@ mkdir -p m3-l2 && cd m3-l2
 
 Use **10,000,000** counted requests and **4,000** server errors over the most recent 30 days. This is a **rolling window**: tomorrow's calculation adds the newest day and drops the oldest.
 
-The budget does not reset on the first day of the calendar month. As old requests leave the window and new requests enter it, both the allowed failures and actual failures can change. With these inputs, 4,000 errors use 40% of the 10,000-failure allowance, leaving 6,000; they are only 0.04% of all 10,000,000 counted requests.
+The budget does not reset at the start of a calendar month. Old requests leave the 30-day window as new ones enter it.
 
 Paste this complete code into `calculate-budget.py`:
 
@@ -155,9 +156,9 @@ print(f"SLO met:           {'Yes' if sli >= slo * 100 else 'No'}")
 
 Recalculate when the request total or window changes.
 
-**Two different percentages:** The actual failure percentage is `4,000 / 10,000,000 * 100 = 0.04%`. The budget-used percentage is `4,000 / 10,000 * 100 = 40%`. They use different denominators: all counted requests versus allowed failures. A small failure percentage can still use a large part of a tight budget.
+**Different denominators:** `4,000 / 10,000,000 = 0.04%` is the failure rate. `4,000 / 10,000 = 40%` is the budget used. One compares failures with all requests; the other compares them with allowed failures.
 
-If failures rose to 12,000 with the same request total, budget used would become **120%** and remaining failures would become **-2,000**. A negative result means the service exceeded its allowance by 2,000 failures. The SLI would be **99.88%**, below the 99.9% target.
+If failures rose to 12,000, the 10,000-failure budget would be exceeded by 2,000. Remaining budget would be negative, and the SLI would fall to **99.88%**.
 
 ---
 
@@ -248,27 +249,21 @@ groups:
 
 **What this file does:** Defines an alert when both error percentages stay above 1.44% for two minutes.
 
-The rule expects a request counter named `http_requests_total` with `job`, `code`, and `route` labels. `rate()` handles counter resets. `for: 2m` starts a pending period after both conditions become true; either falling below the threshold cancels it.
+The rule expects `http_requests_total` with `job`, `code`, and `route` labels. A **counter** increases as requests arrive.
 
-`http_requests_total` is a **counter**, a measurement that increases as requests arrive. `rate()` estimates requests per second over each window, and `sum()` combines matching series. Dividing good-request rate by total-request rate gives the good fraction; subtracting it from one gives the error fraction.
+`rate()` calculates requests per second and handles counter resets. `sum()` combines matching counts. The query calculates `1 - good rate / total rate` to get the error fraction.
 
-The filters exclude `499` and `/healthz` from both counts, and exclude `5xx` from the good count. The comparison uses `0.0144`, the decimal form of 1.44%. `and` requires both window conditions, while `for: 2m` requires that combined condition to stay true across rule evaluations for two minutes. The `severity: page` label helps configured notification routing identify urgent alerts.
+The filters skip `499` and `/healthz`; the good count also excludes `5xx`. `0.0144` means 1.44%. `and` requires both windows to exceed it.
 
-**Work through one query:** Suppose the total request rate is 100 requests per second and the good rate is 98. The good fraction is `98 / 100 = 0.98`, so the error fraction is `1 - 0.98 = 0.02`, or **2%**. Since `0.02 > 0.0144`, that window exceeds the fast threshold. Prometheus repeats the calculation for both windows before applying the two-minute condition.
+**Example:** With 100 requests per second and 98 good ones, `1 - 98 / 100 = 0.02`, or **2%** errors. This exceeds 1.44%; the other window must also exceed it.
 
-**Follow the alert over time:** When both windows first exceed the threshold, the alert becomes pending. If they remain above it for two minutes across evaluations, it becomes firing. If either window drops to or below 1.44% during that period, the pending condition clears. A later increase starts a new pending period.
+`for: 2m` keeps the alert pending for two minutes. It fires if both conditions stay true across evaluations. If either drops to or below the threshold, the pending period clears.
 
 Lookback windows are not fixed waiting periods. Traffic and evaluation intervals affect detection. Notifications require a running Prometheus setup and notification configuration.
 
 ---
 
 ## Step 5: Run the Following Commands in the Terminal
-
-<p align="center">
-  <a href="./images/budget-output.png">
-    <img src="./images/budget-output.png" alt="Expected calculator output with 40% budget used and SLO met Yes" width="800">
-  </a>
-</p>
 
 From `m3-l2`, run the calculator after saving the files:
 
@@ -278,9 +273,15 @@ python3 calculate-budget.py
 
 **Explanation:** Prints the error budget and actual SLI for this lab's request counts.
 
+<p align="center">
+  <a href="./images/budget-output.png">
+    <img src="./images/budget-output.png" alt="Expected calculator output with 40% budget used and SLO met Yes" width="800">
+  </a>
+</p>
+
 **What to expect:** The output shows **10,000** allowed failures, **6,000** remaining, and **40%** budget used. `SLO met: Yes` means the measured **99.96%** is above the **99.9%** target. The YAML file defines the alert; running this calculator does not send notifications.
 
-**Read the output:** `Valid requests` is the total after exclusions. `Actual failures` is the number of server errors. `Failures remaining` subtracts those errors from the allowance. `Budget remaining: 60%` and `Budget used: 40%` describe the same allowance; `Actual SLI: 99.96%` describes good requests out of all counted requests.
+**Read the output:** `Budget remaining: 60%` complements the 40% used. `Actual SLI: 99.96%` describes good requests out of all counted requests.
 
 ### Download the Rule Tool
 
@@ -290,7 +291,7 @@ python3 calculate-budget.py
   </a>
 </p>
 
-The remaining screenshots show commands using `promtool`, the rule-file tool included with Prometheus. These instructions use the screenshot's Prometheus 3.5.0 release on Linux with an x86-64 processor. Stay in `m3-l2`. You need `curl` and `tar` installed.
+The screenshots use `promtool` from Prometheus 3.5.0 on Linux x86-64. Stay in `m3-l2`; these commands need `curl` and `tar`.
 
 ```bash
 # paste this as one line
@@ -299,7 +300,7 @@ curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prom
 
 **Explanation:** Downloads the archive containing the rule tool into the current folder.
 
-**Command result:** The progress table shows received bytes, speed, and time. `download-output.png` captures the transfer at **11%**, with about **12.8 MB** received out of **115 MB**. Wait for the received percentage to reach `100` and the prompt to return before extracting. Your speed and timing will differ.
+**Command result:** The screenshot shows **11%** downloaded, about **12.8 MB** out of **115 MB**. Wait until it reaches `100` and the prompt returns before extracting.
 
 ### Extract the Tool
 
@@ -317,7 +318,7 @@ ls prometheus-3.5.0.linux-amd64
 
 **Explanation:** Extracts only `promtool`, then lists the folder containing it.
 
-**Command result:** `tar` normally completes without output. `ls` prints `promtool`. The screenshot shows the long extraction command wrapping at the filename; keep it as one command when pasting. The `promtool` entry identifies the extracted executable.
+**Command result:** `tar` normally prints nothing; `ls` lists `promtool`. The screenshot wraps the long filename, but paste the extraction command as one line.
 
 ### Run the Rule Tool
 
@@ -335,8 +336,7 @@ Run this from `m3-l2`, where you saved `orders-api-rules.yaml`:
 
 **Explanation:** Loads the YAML rule file and reports whether its rule syntax is accepted.
 
-**Command result:** `Checking orders-api-rules.yaml` names the file being read. `SUCCESS: 1 rules found` means the tool accepted the one fast-burn rule. The screenshot uses a different practice-folder path; use your `m3-l2` folder. This command does not run the alert against live traffic or send a notification.
-
+**Command result:** `Checking orders-api-rules.yaml` names the file. `SUCCESS: 1 rules found` means its rule syntax was accepted. Use your `m3-l2` folder, not the screenshot's path. This does not send notifications.
 
 ---
 
