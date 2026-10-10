@@ -297,4 +297,4 @@ ls prometheus-3.5.0.linux-amd64
 
 ## Conclusion
 
-You defined a target, calculated its budget, and wrote an alert. Next, spread requests across servers and handle server failures.
+You set a 99.9% target, which allows 10,000 failures out of 10,000,000 counted requests; the example used 4,000 failures and left 6,000 in the budget. The fast-burn rule warns when errors use that budget too quickly, but sending the warning needs a running Prometheus setup with alert delivery configured. Next, spread requests across servers and switch to working copies when a server fails to help the service stay within its target.

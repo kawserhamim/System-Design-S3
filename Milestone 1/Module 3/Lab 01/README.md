@@ -281,4 +281,4 @@ The screenshot above shows a design with a four-nine load balancer against the o
 
 ## Conclusion
 
-Calculate alternative groups first, then multiply required parts. Backup apps still depend on shared parts. Next, set reliability targets with SLOs and error budgets.
+You learned that every required part adds a way for a request to fail, while alternative app copies let the service keep working when one app stops. Calculate each group of alternatives first, then multiply the required parts: backup apps still need a working load balancer and database. Next, use SLOs and error budgets to set a reliability target and decide how many failures are acceptable.
