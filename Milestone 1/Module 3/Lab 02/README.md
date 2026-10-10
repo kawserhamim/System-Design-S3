@@ -48,7 +48,7 @@ An **HTTP status code** describes a response. Exclude cancellations (`499`) and 
 
 The **error budget** is the number of failures the target allows. A 99.9% target allows **0.1%** failures: one per 1,000 counted requests. **Burn rate** compares the measured failure percentage with that allowance: `1.44% / 0.1% = 14.4x`. At **1x**, errors use the budget at the allowed rate. At **14.4x**, they use it 14.4 times as fast.
 
-A **window** is a past period. The long window checks lasting errors; the short one checks recent errors. Both must exceed the limit. If the hour shows 2% errors but the last five minutes show 0.2%, the fast alert does not start. The short window shows that the service has recovered.
+A **window** is the time period we look back over. The long window checks lasting errors; the short one checks recent errors. Both must exceed the limit. If the hour shows 2% errors but the last five minutes show 0.2%, the fast alert does not start. The short window shows that the service has recovered.
 
 | Threshold | Long + short window | Failure percentage | Action |
 | --- | --- | --- | --- |
@@ -98,7 +98,7 @@ mkdir -p m3-l2 && cd m3-l2
 
 **Explanation:** Creates and opens the lab folder without printing output.
 
-Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day; the budget does not reset at the start of a calendar month. Paste into `calculate-budget.py`:
+Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day. The budget does not reset at the start of a calendar month. Paste into `calculate-budget.py`:
 
 ```python
 """Calculate the request-based error budget used in this lab."""
@@ -123,7 +123,7 @@ print(f"SLO met:           {'Yes' if sli >= slo * 100 else 'No'}")
 
 **What this file does:** Calculates allowed failures, remaining budget, and the actual SLI.
 
-The 10,000-failure budget comes from `10,000,000 * 0.001`. Using 4,000 leaves 6,000 and uses **40%** of the budget. That 40% compares errors with allowed failures, not with all requests.
+The 10,000-failure budget comes from `10,000,000 * 0.001`. Using 4,000 leaves 6,000 and uses **40%** of the budget. The 40% tells you how much of the allowed failures you have used.
 
 ---
 
@@ -214,9 +214,9 @@ groups:
 
 **What this file does:** Alerts when both error percentages stay above 1.44% for two minutes.
 
-Labels identify the service (`job`), status (`code`), and path (`route`). `rate()` calculates requests per second; `sum()` combines counts. The query calculates the error fraction; `0.0144` means 1.44%. With 100 requests per second and 98 good ones, `1 - 98 / 100 = 0.02`, or **2%** errors. Both windows must pass this comparison.
+**Labels** are names attached to a measurement. Here, they identify the service (`job`), response code (`code`), and request path (`route`). `rate()` calculates requests per second. `sum()` combines counts. The query calculates the share of requests that failed. The decimal `0.0144` means 1.44%. With 100 requests per second and 98 good ones, `1 - 98 / 100 = 0.02`, or **2%** errors. The error rate in both windows must be above 1.44%.
 
-`and` requires both windows. `for: 2m` waits two minutes; either condition becoming false clears the wait. Notifications need running Prometheus with alert delivery configured.
+`and` requires both windows to be above the limit. `for: 2m` waits two minutes while this stays true. If either falls to the limit or below, the wait clears. To send messages, run Prometheus and set up where alerts should go.
 
 ---
 
