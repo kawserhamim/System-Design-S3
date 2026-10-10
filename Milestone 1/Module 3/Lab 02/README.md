@@ -26,7 +26,6 @@ In this lab, you will decide which requests count as good or bad, calculate the 
 
 - Markdown for the SLO document.
 - Prometheus query sketches for budget burn-rate alerts.
-- `promtool` for the optional syntax check in Step 5.
 
 ## Deliverable
 
@@ -101,9 +100,9 @@ The `x` means “times.” A **14.4x burn rate** means failures are using the bu
 
 | Burn-rate threshold | Check the failure percentage in both periods | What the team should do |
 | :--- | :--- | :--- |
-| **14.4x — fast** | Above **1.44%** over the last **1 hour** AND the last **5 minutes** | Send an urgent alert (“Page now”). |
-| **6x — medium** | Above **0.60%** over the last **6 hours** AND the last **30 minutes** | Send an urgent alert (“Page now”). |
-| **1x — slow** | Above **0.10%** over the last **3 days** AND the last **6 hours** | Create a task for the team to investigate (“Create ticket”). |
+| **14.4x (fast)** | Above **1.44%** over the last **1 hour** AND the last **5 minutes** | Send an urgent alert (“Page now”). |
+| **6x (medium)** | Above **0.60%** over the last **6 hours** AND the last **30 minutes** | Send an urgent alert (“Page now”). |
+| **1x (slow)** | Above **0.10%** over the last **3 days** AND the last **6 hours** | Create a task for the team to investigate (“Create ticket”). |
 
 A **window** is the period we look back over. The long window checks whether errors have been happening for a while. The short window checks whether they are still happening recently. **Both must exceed the row's threshold.** A high error rate in only one window does not trigger that rule.
 
@@ -126,12 +125,12 @@ Start by writing down the rules for counting requests. Use the same rules every 
 
 | Request or response | How we count it | Why |
 | :--- | :--- | :--- |
-| `200` — request succeeded | Good | The server handled the request without a server error. |
-| `302` — redirect to another address | Good | The server returned a redirect without a server error. |
-| `404` — item not found | Good | This lab counts client errors as good responses. |
-| `499` — client disconnected | Skip | Our rules exclude cancellations. |
-| `500` — server error | Bad | The server failed to handle the request. |
-| `504` — gateway timeout | Bad | The gateway did not receive a response in time. |
+| `200`: request succeeded | Good | The server handled the request without a server error. |
+| `302`: redirect to another address | Good | The server returned a redirect without a server error. |
+| `404`: item not found | Good | This lab counts client errors as good responses. |
+| `499`: client disconnected | Skip | Our rules exclude cancellations. |
+| `500`: server error | Bad | The server failed to handle the request. |
+| `504`: gateway timeout | Bad | The gateway did not receive a response in time. |
 | Any request to `/healthz` | Skip | Our rules exclude health checks, whatever their status code. |
 
 **Check your understanding:** Suppose there are 100 requests: 5 health checks, 2 cancellations, 90 good requests, and 3 server errors. We skip the first 7, so there are **93 valid requests**. The SLI is `90 / 93 x 100 ≈ 96.77%`.
@@ -322,62 +321,6 @@ A lookback window is not a fixed waiting period: a large spike can cross both th
 
 ---
 
-## Step 5: Check the Rule File
-
-This step checks the YAML rule file. The Markdown file is a document you read; the YAML file contains instructions for Prometheus. Use `promtool` to check those instructions without starting a Prometheus server.
-
-Create `slo-document.md` and `orders-api-rules.yaml` in your practice folder using the examples in Steps 3 and 4. Run the following commands from that folder. These download instructions are for Linux with an x86-64 processor.
-
-```bash
-# paste this as one line
-curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
-```
-
-**Explanation:** Downloads the official Prometheus archive containing `promtool`.
-
-<p align="center">
-  <a href="./images/download-output.png">
-    <img src="./images/download-output.png" alt="Terminal screenshot showing the Prometheus archive download in progress at 11 percent" width="900">
-  </a>
-</p>
-
-**Read the output:** This screenshot shows the download in progress at `11%`. Wait until the received percentage reaches `100` and the command returns to the prompt before extracting the archive. The speed and time will differ on your computer.
-
-```bash
-tar -xzf prometheus-3.5.0.linux-amd64.tar.gz prometheus-3.5.0.linux-amd64/promtool
-ls prometheus-3.5.0.linux-amd64
-```
-
-**Explanation:** Extracts only `promtool`, saving space because we do not need the Prometheus server binary. `tar` normally prints nothing on success. The next command, `ls`, lists the extracted folder so you can confirm that `promtool` exists.
-
-<p align="center">
-  <a href="./images/extract-output.png">
-    <img src="./images/extract-output.png" alt="Terminal screenshot showing the extraction command and promtool filename" width="900">
-  </a>
-</p>
-
-**Read the output:** Seeing `promtool` under the `ls` command means the checker is present.
-
-```bash
-./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
-```
-
-**Explanation:** Checks the rule syntax without starting a server.
-
-<p align="center">
-  <a href="./images/run-output.png">
-    <img src="./images/run-output.png" alt="Check your rule file: promtool check rules outputs SUCCESS" width="900">
-  </a>
-</p>
-
-**Read the output:** `Checking orders-api-rules.yaml` identifies the file being checked. `SUCCESS: 1 rules found` means the checker accepted the syntax and found our one fast-burn alert rule.
-
-These images render output captured from real commands, rather than example results. During capture, the local disk was full, so the downloaded checker was run from memory; the rule-check output comes from the official Prometheus 3.5.0 binary. The displayed checker command uses the normal extracted-folder path for students.
-
-Passing this check does not send an alert or prove that live metrics exist. Sending notifications requires a running Prometheus setup and notification configuration.
-
----
-
 ## Conclusion
 
-You documented the Orders API target, calculated its error budget, and checked a fast-burn alert rule. Next, explore load balancing and automated failover.
+You documented the Orders API target, calculated its error budget, and wrote a fast-burn alert rule. Next, explore load balancing and automated failover.
