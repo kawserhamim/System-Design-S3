@@ -6,7 +6,7 @@
   </a>
 </p>
 
-Build a Python calculator for a URL shortener with a load balancer, app servers, and a database. Compare designs and estimate how long each might be unavailable. This lab calculates a model; it does not start servers.
+Build a Python calculator for a URL shortener, a service that turns long links into short ones. It has a load balancer, which sends requests to app servers, and a database, which stores the links. Compare designs and estimate how long each might be unavailable. This lab calculates a model; it does not start servers.
 
 ## Objective
 
@@ -24,7 +24,7 @@ By the end of this lab, you can:
   </a>
 </p>
 
-A calculator in `availability.py` and a system description in `components.csv`. The final CSV uses a four-nine load balancer, two three-nine apps, and a four-nine database.
+A calculator in `availability.py` and a system description in `components.csv`. A **CSV** is a text table with comma-separated columns. The final CSV uses a four-nine load balancer, two three-nine apps, and a four-nine database.
 
 ## Understand Availability and Nines
 
@@ -34,7 +34,7 @@ A calculator in `availability.py` and a system description in `components.csv`. 
   </a>
 </p>
 
-**Availability** is the fraction of time a service can do its job: uptime divided by total time. **Nines** counts the 9s in its percentage. Three nines means 99.9%, written as `0.999` in formulas.
+**Availability** is the share of time a service can do its job. Divide working time by total time to calculate it. **Nines** counts the 9s in its percentage. Three nines means 99.9%, written as `0.999` in formulas.
 
 At 99.9% availability, a service works for 999 out of 1,000 minutes. Its unavailable fraction is `1 - 0.999 = 0.001`.
 
@@ -47,7 +47,7 @@ The picture compares required parts with alternative copies. Required parts add 
 | 4 | 99.99% | 4.32 minutes | 52.56 minutes |
 | 5 | 99.999% | 0.432 minutes | 5.256 minutes |
 
-Each extra nine reduces expected downtime tenfold. Multiply the unavailable fraction by the period length: `(1 - 0.999) * 525600 = 525.6` minutes per year. These are estimates, not outage schedules.
+Each extra nine reduces expected downtime to one tenth of the previous amount. Multiply the unavailable fraction by the period length: `(1 - 0.999) * 525600 = 525.6` minutes per year. These numbers estimate total downtime. They do not tell you when an outage will happen.
 
 A 30-day month has 43,200 minutes. At three nines, expected downtime is `43,200 * 0.001 = 43.2` minutes.
 
@@ -108,7 +108,7 @@ Read the picture as `LB -> (App 1 || App 2) -> DB`. Calculate the alternative ap
 
 A **shared dependency** is a part both apps need. Here, a failed load balancer or database stops both apps.
 
-The model assumes independent failures, routing to healthy apps, and enough capacity. Two apps on the same failed machine would fail together.
+The model assumes parts fail independently, requests reach working apps, and one app can handle the traffic alone. Two apps on the same failed machine would fail together.
 
 The combined design has **578.63 minutes**, or **9.64 hours**, of expected yearly downtime: `(1 - availability) * 525600`.
 
@@ -253,7 +253,7 @@ For `--nines 3 3`, the code converts each `3` to `0.999`, applies the chosen for
   </a>
 </p>
 
-A **CSV** is a text table with comma-separated columns. Paste this into `components.csv`:
+Paste this CSV table into `components.csv`:
 
 ```csv
 component,nines,group
@@ -279,7 +279,7 @@ Both app rows use `api`, so they form one parallel group. The `lb` and `db` grou
   </a>
 </p>
 
-Run these commands from `m3-l1` after saving both files:
+Run these commands from `m3-l1` after saving both files. `--topology` chooses how the parts connect: serial requires every part, while parallel needs one working copy.
 
 ```bash
 python3 availability.py --demo

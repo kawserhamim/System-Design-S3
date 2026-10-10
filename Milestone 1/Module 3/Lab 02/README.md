@@ -6,7 +6,7 @@
   </a>
 </p>
 
-Define a reliability target for an online shop's Orders API. Calculate allowed failures and write an alert rule. Use a text editor and Python 3; no running service is needed.
+Define a reliability target for an online shop's Orders API, the service that receives order requests. An **API** is a way for programs to request data or actions from another program. Calculate allowed failures and write an alert rule. Use a text editor and Python 3; no running service is needed.
 
 ## Objective
 
@@ -24,7 +24,7 @@ By the end of this lab, you can:
   </a>
 </p>
 
-An Orders API plan in `slo-document.md` and `orders-api-rules.yaml`, plus `calculate-budget.py`. Record three thresholds but implement only the fast rule. The diagram's medium rule is optional.
+An Orders API plan in `slo-document.md` and `orders-api-rules.yaml`, plus `calculate-budget.py`. **YAML** is a text format for settings and rules. Record three alert limits, called **thresholds**, but write only the fast rule. The diagram's medium rule is optional.
 
 ## Understand SLI and SLO
 
@@ -54,13 +54,13 @@ Health checks are not customer orders, and `499` means the client cancelled. Exc
   </a>
 </p>
 
-The **error budget** is the allowance for failed requests. A 99.9% target allows **0.1%** failures. **Burn rate** divides the measured failure percentage by this allowance: `1.44% / 0.1% = 14.4x`.
+The **error budget** is the number of failed requests the target allows. A 99.9% target allows **0.1%** failures. **Burn rate** divides the measured failure percentage by this allowance: `1.44% / 0.1% = 14.4x`.
 
 A 99.9% target allows one failure per 1,000 counted requests, or 10,000 per 10,000,000 requests.
 
 At **1x**, errors use the budget at the allowed rate. At **14.4x**, they use it 14.4 times as fast. Alerts help the team respond before the 30-day target is missed.
 
-A **window** is the time period we look back over. Both windows must exceed the threshold. A page means an urgent notification; a ticket means a task to review later.
+A **window** is the time period we look back over. The error percentage in both windows must be above the limit. A page is an urgent message to the team. A ticket is a task to review later.
 
 The long window checks persistent errors; the short window checks current errors. If the hour shows 2% but the last five minutes show 0.2%, the fast alert does not start. Both must exceed 1.44%.
 
@@ -70,7 +70,7 @@ The long window checks persistent errors; the short window checks current errors
 | 6x (medium) | 6 hours + 30 minutes | Above 0.60% | Page now |
 | 1x (slow) | 3 days + 6 hours | Above 0.10% | Create ticket |
 
-The diagram's exhaustion times assume steady traffic and errors using a full 30-day allowance. This budget counts failed requests, not downtime.
+The diagram estimates how long it takes to use the whole 30-day budget. It assumes the request and error rates stay the same. This budget counts failed requests, not downtime.
 
 With steady traffic and errors, `30 / 14.4` gives about **2.08 days** to use a full 30-day allowance. This is not a prediction of the budget currently remaining.
 
@@ -94,7 +94,7 @@ Use these rules throughout. Save them in Step 3.
 
 Use `SLI = good / (good + bad) * 100`. For 999 good and one bad request, the SLI is **99.9%**.
 
-**Example:** Exclude 30 requests from 1,000, leaving 970. With 965 good and five bad, the SLI is `965 / 970 * 100 = 99.4845%`. Skipped requests are not in the denominator.
+**Example:** Exclude 30 requests from 1,000, leaving 970. With 965 good and five bad, the SLI is `965 / 970 * 100 = 99.4845%`. Do not include skipped requests in the total you divide by.
 
 ---
 
@@ -156,9 +156,9 @@ print(f"SLO met:           {'Yes' if sli >= slo * 100 else 'No'}")
 
 Recalculate when the request total or window changes.
 
-**Different denominators:** `4,000 / 10,000,000 = 0.04%` is the failure rate. `4,000 / 10,000 = 40%` is the budget used. One compares failures with all requests; the other compares them with allowed failures.
+**Different totals:** `4,000 / 10,000,000 = 0.04%` is the failure rate. `4,000 / 10,000 = 40%` is the budget used. One compares failures with all requests; the other compares them with allowed failures.
 
-If failures rose to 12,000, the 10,000-failure budget would be exceeded by 2,000. Remaining budget would be negative, and the SLI would fall to **99.88%**.
+If failures rose to 12,000, they would go 2,000 over the budget. The remaining budget would be `-2,000`, and the SLI would fall to **99.88%**.
 
 ---
 
@@ -209,7 +209,7 @@ Allowed failures = valid requests * 0.001.
 
 **What this file does:** Records request rules, the target, budget calculations, and notification thresholds.
 
-Count retries separately. Requests that never reach the gateway need outside monitoring. Review tickets the next business day; prioritize reliability fixes when the budget runs out.
+A **retry** is another attempt at the same request. Count each attempt separately. The **gateway** receives requests before sending them to the service. Requests that never reach it need measurements from outside the system. Review tickets the next business day; prioritize reliability fixes when the budget runs out.
 
 ---
 
@@ -221,7 +221,7 @@ Count retries separately. Requests that never reach the gateway need outside mon
   </a>
 </p>
 
-**Prometheus** collects service measurements. Its query language, **PromQL**, calculates error rates from request counters. Create `orders-api-rules.yaml` and paste:
+**Prometheus** collects service measurements. **PromQL** is its language for calculating values from those measurements. A **counter** is a measurement that increases as requests arrive. Create `orders-api-rules.yaml` and paste:
 
 ```yaml
 groups:
@@ -249,17 +249,17 @@ groups:
 
 **What this file does:** Defines an alert when both error percentages stay above 1.44% for two minutes.
 
-The rule expects `http_requests_total` with `job`, `code`, and `route` labels. A **counter** increases as requests arrive.
+The rule expects a counter named `http_requests_total`. Its **labels** describe the service (`job`), response status (`code`), and request path (`route`).
 
-`rate()` calculates requests per second and handles counter resets. `sum()` combines matching counts. The query calculates `1 - good rate / total rate` to get the error fraction.
+`rate()` calculates requests per second. It also handles the counter starting over after a restart. `sum()` combines matching counts. The query calculates `1 - good rate / total rate` to get the error fraction.
 
 The filters skip `499` and `/healthz`; the good count also excludes `5xx`. `0.0144` means 1.44%. `and` requires both windows to exceed it.
 
 **Example:** With 100 requests per second and 98 good ones, `1 - 98 / 100 = 0.02`, or **2%** errors. This exceeds 1.44%; the other window must also exceed it.
 
-`for: 2m` keeps the alert pending for two minutes. It fires if both conditions stay true across evaluations. If either drops to or below the threshold, the pending period clears.
+`for: 2m` keeps the alert **pending**, meaning it is waiting, for two minutes. It fires if both conditions stay true each time Prometheus checks them. If either drops to or below the limit, the wait starts over when both are above the limit again.
 
-Lookback windows are not fixed waiting periods. Traffic and evaluation intervals affect detection. Notifications require a running Prometheus setup and notification configuration.
+The windows describe past requests, not a fixed wait before an alert. Detection depends on traffic and how often Prometheus checks the rule. To send messages, run Prometheus and set up where alerts should go.
 
 ---
 
@@ -281,7 +281,7 @@ python3 calculate-budget.py
 
 **What to expect:** The output shows **10,000** allowed failures, **6,000** remaining, and **40%** budget used. `SLO met: Yes` means the measured **99.96%** is above the **99.9%** target. The YAML file defines the alert; running this calculator does not send notifications.
 
-**Read the output:** `Budget remaining: 60%` complements the 40% used. `Actual SLI: 99.96%` describes good requests out of all counted requests.
+**Read the output:** `Budget remaining: 60%` means 60% is left after using 40%. `Actual SLI: 99.96%` describes good requests out of all counted requests.
 
 ### Download the Rule Tool
 
@@ -291,7 +291,7 @@ python3 calculate-budget.py
   </a>
 </p>
 
-The screenshots use `promtool` from Prometheus 3.5.0 on Linux x86-64. Stay in `m3-l2`; these commands need `curl` and `tar`.
+The screenshots use `promtool`, a tool that reads Prometheus rule files. These commands use Prometheus 3.5.0 on Linux with a 64-bit Intel or AMD processor (x86-64). Stay in `m3-l2`; these commands need `curl` and `tar`.
 
 ```bash
 # paste this as one line
@@ -334,12 +334,12 @@ Run this from `m3-l2`, where you saved `orders-api-rules.yaml`:
 ./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
 ```
 
-**Explanation:** Loads the YAML rule file and reports whether its rule syntax is accepted.
+**Explanation:** Reads the YAML file and reports whether its rules are written correctly.
 
-**Command result:** `Checking orders-api-rules.yaml` names the file. `SUCCESS: 1 rules found` means its rule syntax was accepted. Use your `m3-l2` folder, not the screenshot's path. This does not send notifications.
+**Command result:** `Checking orders-api-rules.yaml` names the file. `SUCCESS: 1 rules found` means the tool accepted how the one rule was written. Use your `m3-l2` folder, not the screenshot's path. This does not send notifications.
 
 ---
 
 ## Conclusion
 
-You defined a reliability target, calculated its failure allowance, and wrote a fast-burn alert rule. Next, explore load balancing and automated failover to reduce failures in the service itself.
+You defined a reliability target, calculated its failure allowance, and wrote a fast-burn alert rule. Next, explore how to spread requests across servers and switch to a working server when one fails.
