@@ -43,7 +43,7 @@ A calculator in `availability.py` and a design in `components.csv`. A **CSV** is
 | 4 | 99.99% | 4.32 minutes | 52.56 minutes |
 | 5 | 99.999% | 0.432 minutes | 5.256 minutes |
 
-Calculate yearly downtime with `(1 - availability) * 525600`. At three nines, this gives **525.6 minutes**. Each extra nine reduces downtime to one tenth; these totals do not predict when outages happen.
+Calculate yearly downtime with `(1 - availability) * 525600`. At three nines, this gives **525.6 minutes**. Each extra nine reduces downtime to one tenth; these totals do not predict when outages happen. A 30-day month has 43,200 minutes, so three nines gives `43,200 * 0.001 = 43.2` minutes of downtime.
 
 ## Serial: Every Part Must Work
 
@@ -55,7 +55,7 @@ Calculate yearly downtime with `(1 - availability) * 525600`. At three nines, th
 
 The request needs the load balancer, app, and database. In the picture, the app is down, so a working database cannot finish the request alone. **Independent failures** means one part failing does not change another part's failure chance.
 
-For independent required parts, multiply their availabilities. Two three-nine parts give `0.999 * 0.999 = 0.998001`, or **99.8001%**. Adding required parts adds ways for the request to fail.
+For independent required parts, multiply their availabilities. Two three-nine parts give `0.999 * 0.999 = 0.998001`, or **99.8001%**. Adding required parts adds ways for the request to fail. Both must work at the same time, so the combined result is lower than either part alone.
 
 ## Parallel: One Copy Is Enough
 
@@ -67,7 +67,7 @@ For independent required parts, multiply their availabilities. Two three-nine pa
 
 A **replica** is another copy that does the same job. Two alternative apps work as a group if either works. Each fails with probability `0.001`, so both independent apps fail together with probability `0.001 * 0.001`.
 
-Subtract that from one: `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. This covers the app group only. The surviving app must handle the traffic alone.
+Subtract that from one: `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. This covers the app group only. The surviving app must handle the traffic alone. If App 2 stops, App 1 can still serve requests. The group fails only when both stop; that is why we subtract the chance of both failing from one.
 
 ## Combined: Calculate the Group First
 
@@ -77,7 +77,7 @@ Subtract that from one: `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. This co
   </a>
 </p>
 
-A **tier** is a part or group doing one role. Read the picture as `LB -> (App 1 || App 2) -> DB`; `||` means alternatives. Calculate the app group first, then multiply the required tiers.
+A **tier** is a part or group doing one role. Read the picture as `LB -> (App 1 || App 2) -> DB`; `||` means alternatives. Calculate the app group first, then multiply the required tiers. Treat the two apps as one group with availability `0.999999`; the request still needs the load balancer and database.
 
 With three nines for the load balancer and apps, and four for the database, `0.999 * 0.999999 * 0.9999` gives **99.889910%**. Both apps need the same load balancer and database, called **shared dependencies**. Either shared part can stop both apps; two apps on one failed machine also fail together.
 
@@ -222,7 +222,7 @@ DB-primary,4,db
 
 **What this file does:** Describes the load balancer, two alternative apps, and database.
 
-Rows in the same group are alternatives. Different groups are required. Use `3` for three nines, not `99.9`.
+Rows in the same group are alternatives. Different groups are required. Both `api` rows can do the same job, so either can serve the request; `lb` and `db` have separate required jobs. Use `3` for three nines, not `99.9`.
 
 ---
 
