@@ -170,11 +170,81 @@ Create a virtual environment, a separate place for this lab’s Python packages:
 
 ```bash
 python3 -m venv .venv
+```
+
+**Explanation:** Creates a separate place for this lab's Python packages.
+
+<p align="center">
+  <a href="images/venv-create-output.png">
+    <img src="images/venv-create-output.png" alt="Captured virtual environment creation with no output and exit status zero" width="1000">
+  </a>
+</p>
+
+**What to expect:** This command normally prints nothing on success. The capture records exit status `0`.
+
+```bash
 source .venv/bin/activate
+```
+
+**Explanation:** Makes this terminal use the lab's Python environment.
+
+<p align="center">
+  <a href="images/venv-activate-output.png">
+    <img src="images/venv-activate-output.png" alt="Captured environment activation with no output and exit status zero" width="1000">
+  </a>
+</p>
+
+**What to expect:** Activation normally prints nothing. Your terminal may add `(.venv)` to its prompt.
+
+```bash
 python3 -m pip install pyyaml
 ```
 
-**Explanation:** A virtual environment keeps this lab's packages separate from anything else on your machine.
+**Explanation:** Installs the package that reads YAML files.
+
+<p align="center">
+  <a href="images/pip-install-output.png">
+    <img src="images/pip-install-output.png" alt="Captured pip failure because PyYAML could not be fetched in this environment" width="1000">
+  </a>
+</p>
+
+**Captured result:** This environment could not fetch PyYAML. The command returned exit status `1` and `No matching distribution found for pyyaml`. The capture used zero retries and a ten-second timeout to avoid waiting on unavailable package access. On a machine with package access, this command should install PyYAML or report that it is already installed.
+
+### Use the Locally Installed Package
+
+PyYAML was already available in this machine's system Python. The following fallback lets the virtual environment use that local copy; use it only if your system Python already has PyYAML.
+
+```bash
+python3 -m venv --system-site-packages .venv
+```
+
+**Explanation:** Allows the lab environment to use packages already installed in system Python.
+
+<p align="center">
+  <a href="images/venv-fallback-output.png">
+    <img src="images/venv-fallback-output.png" alt="Captured local package fallback completing with exit status zero" width="1000">
+  </a>
+</p>
+
+**What to expect:** The command completes without output. The environment can now see the local PyYAML package.
+
+Run the installation command again in the active environment:
+
+```bash
+python3 -m pip install pyyaml
+```
+
+**Explanation:** Reports whether the environment can use PyYAML.
+
+<p align="center">
+  <a href="images/pip-local-output.png">
+    <img src="images/pip-local-output.png" alt="Captured requirement already satisfied message for local PyYAML 6.0.1" width="1000">
+  </a>
+</p>
+
+**Captured result:** `Requirement already satisfied` reports PyYAML **6.0.1** in `/usr/lib/python3/dist-packages`. Both model commands below ran successfully using that copy.
+
+These images render the actual output captured when the commands were run. The added “No terminal output” and exit-status lines describe the capture; they are not text printed by the commands.
 
 Create `analyze_topology.py` with the code below. It calculates each tier first, then the whole system, and checks both targets.
 
@@ -470,14 +540,55 @@ does not always cause the same number of failures.
 
 Your virtual environment from Step 4 should already be active.
 
+Run the starting design first:
+
 ```bash
 python3 analyze_topology.py topology.yaml
+```
+
+**Explanation:** Calculates availability and compares the starting design with both targets.
+
+<p align="center">
+  <a href="images/baseline-output.png">
+    <img src="images/baseline-output.png" alt="Actual baseline output with 99.740225 percent availability and 2598 predicted failures" width="1000">
+  </a>
+</p>
+
+**What to expect:** The baseline has **99.740225%** availability, **2.585** nines, and **112.22 minutes** of downtime over 30 days. Its **2,598** predicted failures fit within the 99.5% target's 5,000-failure budget, but exceed the 99.9% target's 1,000-failure budget.
+
+Run the design with extra Orders and Inventory copies:
+
+```bash
 python3 analyze_topology.py topology-improved.yaml
 ```
 
-![Run output](images/run-output.png)
+**Explanation:** Calculates the improved design with two copies of each app tier.
 
-**What to expect:** The baseline run prints 99.740225% availability, 2.585 nines, and MODEL PASS on the 99.5% SLO but MODEL FAIL on the 99.9% SLO. The improved run prints 99.939805% availability, 3.220 nines, and MODEL PASS on both SLOs.
+<p align="center">
+  <a href="images/improved-output.png">
+    <img src="images/improved-output.png" alt="Actual improved output with 99.939805 percent availability and 602 predicted failures" width="1000">
+  </a>
+</p>
+
+**What to expect:** The improved design has **99.939805%** availability, **3.220** nines, and **26.00 minutes** of downtime. Its **602** predicted failures fit within both budgets, so both targets show `MODEL PASS`.
+
+<p align="center">
+  <a href="images/run-output.png">
+    <img src="images/run-output.png" alt="Both actual model runs shown together for comparison" width="1000">
+  </a>
+</p>
+
+| Result over 30 days | Baseline | Improved |
+| --- | --- | --- |
+| Availability | 99.740225% | 99.939805% |
+| Expected downtime | 112.22 minutes | 26.00 minutes |
+| Predicted failed requests | 2,598 | 602 |
+| 99.5% target | MODEL PASS | MODEL PASS |
+| 99.9% target | MODEL FAIL | MODEL PASS |
+
+`MODEL PASS` describes the calculation, not measured live traffic. Both commands completed with exit status `0`; `MODEL FAIL` for a target does not mean the Python command failed.
+
+---
 
 ## Understanding checks
 
