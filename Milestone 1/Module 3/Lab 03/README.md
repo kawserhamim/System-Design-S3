@@ -65,9 +65,29 @@ The availability values in this lab are practice numbers, not measurements from 
 
 ---
 
-## Step 1: Write the topology.yaml file
+## Before you start: Create a lab folder
 
-Create `topology.yaml`. It lists the tiers that a request needs and the copies in each tier. YAML stores data using names, values, and indentation. Use spaces for indentation; each `-` starts a list item.
+You need a terminal, Python 3, and a text editor. The terminal commands in this lab use Bash on Linux or macOS.
+
+Run these commands once:
+
+```bash
+mkdir -p reliability-lab
+cd reliability-lab
+```
+
+Open this folder in your text editor. Create and save all six deliverable files here. Run every remaining terminal command from this folder.
+
+You are modeling a service, not deploying one. You do not need to start a Gateway, Orders service, Inventory service, or Database.
+
+## Step 1: Describe the starting design in topology.yaml
+
+**Your task:** Create a file named `topology.yaml` in your lab folder. Copy the YAML block below into it and save it.
+
+A **tier** is one required part of the service. A **copy** is an instance that can do that tier's job. The starting design has four tiers, with one copy in each tier.
+
+For this exercise, a successful request needs every tier in this path:
+
 
 ```text
 Client  --->  Gateway  --->  Orders  --->  Inventory  --->  Database
@@ -100,7 +120,19 @@ tiers:
       - availability_percent: 99.99
 ```
 
-**What this file does:** It lists every required tier in order, and gives each tier its availability as a percent. Every tier has one copy for now.
+Read the file using this guide:
+
+| Field | Meaning in this lab |
+|---|---|
+| `service` | A name for the service: `ordering-api`. |
+| `window_days` | The period we model: 30 days. |
+| `monthly_valid_requests` | The number of requests counted during that period: 1,000,000. |
+| `slo_targets_percent` | The two success targets we will compare: 99.5% and 99.9%. |
+| `tiers` | The four parts that must all work. |
+| `copies` | The instances that can do one tier's job. |
+| `availability_percent` | How often a copy is assumed to be available. Enter `99.95`, not `0.9995`. |
+
+**Check before continuing:** Your file should contain four `name` entries and one `availability_percent` entry under each. Keep the indentation exactly as shown. Use spaces, not tabs; YAML uses indentation to group values. Each `-` starts a list item.
 
 For this exercise, assume the Database is a managed multi-AZ service with 99.99% availability. This is a practice assumption, not a provider guarantee. Its internal redundancy is already included in that value, so represent it as one logical copy in the model.
 
@@ -108,7 +140,18 @@ For this exercise, assume the Database is a managed multi-AZ service with 99.99%
 
 ## Step 2: Calculate availability by hand
 
-Create `calculations.md` to save your work. Divide each percentage by 100 to get the decimal used in the formulas:
+**Your task:** Create `calculations.md` in the same folder. Record your working and answers there. A `.md` file is a plain text file that can contain headings and tables.
+
+Complete these calculations in order:
+
+1. Convert each component's percentage to a decimal.
+2. Multiply the four decimals to get system availability.
+3. Multiply that result by 100 to express it as a percentage.
+4. Calculate the unavailable fraction: `1 - A_system`.
+5. Multiply the unavailable fraction by 43,200 to estimate downtime in minutes.
+6. Use the nines formula below to describe the result.
+
+For example, the Gateway's availability becomes:
 
 ```text
 99.95 / 100 = 0.9995
@@ -139,7 +182,19 @@ downtime ≈ 112.22 minutes over 30 days
 
 ## Step 3: Compare two SLO targets and their error budgets
 
-Assume 1,000,000 requests count toward the SLO over 30 days. Calculate both budgets, then check the table. The allowed failure fraction is the share of requests that may fail.
+**Your task:** Add an “SLO comparison” section to `calculations.md`.
+
+An **SLO** is the success target you choose. An **error budget** is the number of failures that target allows. For example, a 99.5% success target allows 0.5% of counted requests to fail.
+
+Use 1,000,000 counted requests over 30 days. For each target, calculate the allowed failure fraction and multiply it by 1,000,000:
+
+```text
+For 99.5%:
+allowed_failure_fraction = 1 - 0.995 = 0.005
+allowed_failed_requests = 1,000,000 x 0.005 = 5,000
+```
+
+Repeat this for 99.9%, then compare your answers with the table below. Record which target the baseline can meet in the model.
 
 ```text
 allowed_failure_fraction = 1 - (SLO_percent / 100)
@@ -166,7 +221,11 @@ predicted_failed_requests ≈ (112.22 / 43200) x 1,000,000 ≈ 2,598
 
 ## Step 4: Write the Python calculator
 
-Create a virtual environment, a separate place for this lab’s Python packages:
+**Your task:** Set up Python, then create `analyze_topology.py` in your lab folder.
+
+Run the following commands one at a time in the same terminal. A **virtual environment** keeps the packages for this lab together.
+
+First, create the environment:
 
 ```bash
 python3 -m venv .venv
@@ -208,45 +267,53 @@ python3 -m pip install pyyaml
   </a>
 </p>
 
-**Captured result:** This environment could not fetch PyYAML. The command returned exit status `1` and `No matching distribution found for pyyaml`. The capture used zero retries and a ten-second timeout to avoid waiting on unavailable package access. On a machine with package access, this command should install PyYAML or report that it is already installed.
+**Check the installation:** A successful install reports `Successfully installed` or `Requirement already satisfied`. Confirm that Python can read YAML:
 
-### Use the Locally Installed Package
+```bash
+python3 -c "import yaml; print('PyYAML is ready')"
+```
 
-PyYAML was already available in this machine's system Python. The following fallback lets the virtual environment use that local copy; use it only if your system Python already has PyYAML.
+Expected output:
+
+```text
+PyYAML is ready
+```
+
+If installation fails, check the troubleshooting note below before continuing. The screenshot above shows a failed installation from the capture environment; a failure is not the expected result for this step.
+
+<details>
+<summary>Troubleshooting: PyYAML installation failed</summary>
+
+Read the error message first. If pip cannot reach the package server, check your network access and try the installation again.
+
+If PyYAML is already installed in your system Python, you can use that existing package. Check it first:
+
+```bash
+deactivate
+python3 -c "import yaml; print('System PyYAML is available')"
+```
+
+Only if that check succeeds, run:
 
 ```bash
 python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+python3 -c "import yaml; print('PyYAML is ready')"
 ```
 
-**Explanation:** Allows the lab environment to use packages already installed in system Python.
+If the system check reports `ModuleNotFoundError`, this fallback cannot help. Install PyYAML successfully before running the calculator.
 
-<p align="center">
-  <a href="images/venv-fallback-output.png">
-    <img src="images/venv-fallback-output.png" alt="Captured local package fallback completing with exit status zero" width="1000">
-  </a>
-</p>
+</details>
 
-**What to expect:** The command completes without output. The environment can now see the local PyYAML package.
+Now create `analyze_topology.py`, copy the complete code below into it, and save it. You can use the supplied code without writing it from scratch. Your job is to understand its calculation and compare its results with your hand calculations.
 
-Run the installation command again in the active environment:
+The calculator follows this order:
 
-```bash
-python3 -m pip install pyyaml
-```
-
-**Explanation:** Reports whether the environment can use PyYAML.
-
-<p align="center">
-  <a href="images/pip-local-output.png">
-    <img src="images/pip-local-output.png" alt="Captured requirement already satisfied message for local PyYAML 6.0.1" width="1000">
-  </a>
-</p>
-
-**Captured result:** `Requirement already satisfied` reports PyYAML **6.0.1** in `/usr/lib/python3/dist-packages`. Both model commands below ran successfully using that copy.
-
-These images render the actual output captured when the commands were run. The added “No terminal output” and exit-status lines describe the capture; they are not text printed by the commands.
-
-Create `analyze_topology.py` with the code below. It calculates each tier first, then the whole system, and checks both targets.
+1. Read the YAML file.
+2. Calculate availability for the copies in each tier.
+3. Multiply the tier availabilities because every tier is required.
+4. Calculate downtime and predicted failed requests.
+5. Compare predicted failures with each target's error budget.
 
 ```text
 topology.yaml -> load -> parallel availability per tier -> multiply tiers -> nines, downtime, SLO check
@@ -381,7 +448,15 @@ The script accepts availability and SLO targets above 0% and up to 100%, a posit
 
 ## Step 5: Add extra service copies
 
-Create `topology-improved.yaml`. Add a second copy of Orders and Inventory so either copy can do the same job. Keep one Gateway and one Database.
+**Your task:** Make a copy of `topology.yaml` and name it `topology-improved.yaml`. You can use your editor's “Save As” option or run:
+
+```bash
+cp topology.yaml topology-improved.yaml
+```
+
+Open the new file. Under both `orders` and `inventory`, add one more `- availability_percent: 99.9` line. Align each new line with the existing copy's line. Save the file.
+
+Compare your file with the complete example below. Orders and Inventory should each have two copies; Gateway and Database should each have one.
 
 ![Improved topology with replicas](images/improved-topology.png)
 
@@ -413,7 +488,11 @@ tiers:
 
 **What this file does:** It adds a second copy of Orders and Inventory so each tier can keep working if one copy fails.
 
-Before running Python, calculate by hand.
+**Next:** Add an “Improved design” section to `calculations.md`. Calculate the availability of each pair first, then multiply the four tier results.
+
+Each Orders copy has an unavailable fraction of `1 - 0.999 = 0.001`. With independent failures, both copies are unavailable together for a fraction `0.001 x 0.001 = 0.000001`. Subtract this from 1 to get the tier's availability.
+
+Repeat the calculation for Inventory. Then calculate system availability, nines, downtime, and predicted failed requests. Check your working against:
 
 ```text
 A_orders ≈ 1 - (1 - 0.999)^2 ≈ 0.999999
@@ -429,7 +508,7 @@ Gateway and Database are still single points of failure: if either fails, the wh
 
 ## Step 6: Write the SLO document
 
-Write `slo-document.md` to record your target and how you will measure it. Include:
+**Your task:** Create `slo-document.md`. Use the five headings in the example below and write a few sentences under each. Use your calculations to support your choice. Include:
 
 - Which parts are included and which requests count as good or bad, using Lab 02’s rules.
 - The time period: the most recent 30 days.
@@ -480,7 +559,7 @@ The model helps with planning; live traffic may give different results.
 
 ## Step 7: Write the reliability report
 
-Write a one-page `reliability-report.md` to explain your results and suggested change. Include:
+**Your task:** Create `reliability-report.md`. Keep it to about one page. Use the example headings below to organize your explanation, and copy the results from your own `calculations.md`. Include:
 
 - The service diagram and the assumptions used in the calculations.
 - Results for the starting design: availability, nines, downtime, and estimated failed requests.
@@ -538,7 +617,26 @@ does not always cause the same number of failures.
 
 ## Step 8: Run the following commands in the terminal
 
-Your virtual environment from Step 4 should already be active.
+**Your task:** Run both designs and compare the output with `calculations.md`. Save any corrections to your calculations, SLO document, and report.
+
+Make sure your terminal is in `reliability-lab`. If you opened a new terminal, activate the environment again:
+
+```bash
+source .venv/bin/activate
+```
+
+At this point, the folder should contain:
+
+```text
+reliability-lab/
+  topology.yaml
+  topology-improved.yaml
+  calculations.md
+  analyze_topology.py
+  slo-document.md
+  reliability-report.md
+  .venv/
+```
 
 Run the starting design first:
 
@@ -589,6 +687,17 @@ python3 analyze_topology.py topology-improved.yaml
 `MODEL PASS` describes the calculation, not measured live traffic. Both commands completed with exit status `0`; `MODEL FAIL` for a target does not mean the Python command failed.
 
 ---
+
+## Before you submit
+
+- Both calculator commands run without an `Error:` message.
+- Your baseline and improved results match the comparison table above, allowing for rounding.
+- `calculations.md` shows your working for both designs and both error budgets.
+- `slo-document.md` names the design and target you chose and explains how to measure it.
+- `reliability-report.md` compares the designs and states the assumptions and limitations.
+- Submit the six deliverable files. The `.venv` folder is only for running the lab locally.
+
+If you see `No such file or directory`, check your current folder and the filename. If you see a YAML parsing error, check indentation and use spaces instead of tabs. If you see `No module named yaml`, activate `.venv` and repeat the PyYAML check in Step 4.
 
 ## Understanding checks
 
