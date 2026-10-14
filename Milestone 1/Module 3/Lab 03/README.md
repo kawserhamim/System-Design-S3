@@ -78,9 +78,32 @@ cd reliability-lab
 
 Open this folder in your text editor. Create and save all six deliverable files here. Run every remaining terminal command from this folder.
 
+<p align="center">
+  <a href="images/reliability-lab.png">
+    <img src="images/reliability-lab.png" alt="Terminal creating and entering the reliability-lab folder" width="1000">
+  </a>
+</p>
+
+**Folder setup:** The terminal is now inside `reliability-lab`, where the remaining commands should run.
+
+
 You are modeling a service, not deploying one. You do not need to start a Gateway, Orders service, Inventory service, or Database.
 
 ## Step 1: Describe the starting design in topology.yaml
+Create the file from your lab folder:
+
+```bash
+touch topology.yaml
+```
+
+<p align="center">
+  <a href="images/topology-yaml.png">
+    <img src="images/topology-yaml.png" alt="Terminal creating the empty topology.yaml file" width="1000">
+  </a>
+</p>
+
+**File creation:** `touch` creates `topology.yaml` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
+
 
 **Your task:** Create a file named `topology.yaml` in your lab folder. Copy the YAML block below into it and save it.
 
@@ -139,6 +162,20 @@ For this exercise, assume the Database is a managed multi-AZ service with 99.99%
 ---
 
 ## Step 2: Calculate availability by hand
+Create the file from your lab folder:
+
+```bash
+touch calculations.md
+```
+
+<p align="center">
+  <a href="images/calculations.png">
+    <img src="images/calculations.png" alt="Terminal creating the empty calculations.md file" width="1000">
+  </a>
+</p>
+
+**File creation:** `touch` creates `calculations.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
+
 
 **Your task:** Create `calculations.md` in the same folder. Record your working and answers there. A `.md` file is a plain text file that can contain headings and tables.
 
@@ -233,13 +270,8 @@ python3 -m venv .venv
 
 **Explanation:** Creates a separate place for this lab's Python packages.
 
-<p align="center">
-  <a href="images/venv-create-output.png">
-    <img src="images/venv-create-output.png" alt="Captured virtual environment creation with no output and exit status zero" width="1000">
-  </a>
-</p>
 
-**What to expect:** This command normally prints nothing on success. The capture records exit status `0`.
+**What to expect:** This command normally prints nothing on success.
 
 ```bash
 source .venv/bin/activate
@@ -247,11 +279,14 @@ source .venv/bin/activate
 
 **Explanation:** Makes this terminal use the lab's Python environment.
 
+
 <p align="center">
-  <a href="images/venv-activate-output.png">
-    <img src="images/venv-activate-output.png" alt="Captured environment activation with no output and exit status zero" width="1000">
+  <a href="images/venv.png">
+    <img src="images/venv.png" alt="Terminal creating .venv and activating it with the virtual environment prompt visible" width="1000">
   </a>
 </p>
+
+**Environment setup:** The screenshot shows both commands. The `(.venv)` prompt confirms activation.
 
 **What to expect:** Activation normally prints nothing. Your terminal may add `(.venv)` to its prompt.
 
@@ -261,11 +296,14 @@ python3 -m pip install pyyaml
 
 **Explanation:** Installs the package that reads YAML files.
 
+
 <p align="center">
-  <a href="images/pip-install-output.png">
-    <img src="images/pip-install-output.png" alt="Captured pip failure because PyYAML could not be fetched in this environment" width="1000">
+  <a href="images/pip.png">
+    <img src="images/pip.png" alt="Terminal successfully installing PyYAML in the virtual environment" width="1000">
   </a>
 </p>
+
+**Package installation:** The screenshot reports `Successfully installed pyyaml`.
 
 **Check the installation:** A successful install reports `Successfully installed` or `Requirement already satisfied`. Confirm that Python can read YAML:
 
@@ -279,7 +317,16 @@ Expected output:
 PyYAML is ready
 ```
 
-If installation fails, check the troubleshooting note below before continuing. The screenshot above shows a failed installation from the capture environment; a failure is not the expected result for this step.
+<p align="center">
+  <a href="images/payami.png">
+    <img src="images/payami.png" alt="Terminal importing yaml and printing PyYAML is ready" width="1000">
+  </a>
+</p>
+
+**Import check:** This confirms the active Python environment can import PyYAML.
+
+
+If installation fails, check the troubleshooting note below before continuing. Continue only after the import check succeeds.
 
 <details>
 <summary>Troubleshooting: PyYAML installation failed</summary>
@@ -306,6 +353,18 @@ If the system check reports `ModuleNotFoundError`, this fallback cannot help. In
 </details>
 
 Now create `analyze_topology.py`, copy the complete code below into it, and save it. You can use the supplied code without writing it from scratch. Your job is to understand its calculation and compare its results with your hand calculations.
+```bash
+touch analyze_topology.py
+```
+
+<p align="center">
+  <a href="images/analyze.png">
+    <img src="images/analyze.png" alt="Terminal creating the empty analyze_topology.py file" width="1000">
+  </a>
+</p>
+
+**Calculator file:** After creating the file, paste and save the complete Python code below before running it.
+
 
 The calculator follows this order:
 
@@ -454,6 +513,15 @@ The script accepts availability and SLO targets above 0% and up to 100%, a posit
 cp topology.yaml topology-improved.yaml
 ```
 
+<p align="center">
+  <a href="images/improved-topologyy.png">
+    <img src="images/improved-topologyy.png" alt="Terminal creating the empty topology-improved.yaml file with touch" width="1000">
+  </a>
+</p>
+
+**Alternative file creation:** This screenshot uses `touch topology-improved.yaml`. If you use that command instead of `cp`, paste the complete improved YAML below; `touch` does not copy the baseline content.
+
+
 Open the new file. Under both `orders` and `inventory`, add one more `- availability_percent: 99.9` line. Align each new line with the existing copy's line. Save the file.
 
 Compare your file with the complete example below. Orders and Inventory should each have two copies; Gateway and Database should each have one.
@@ -507,6 +575,20 @@ Gateway and Database are still single points of failure: if either fails, the wh
 ---
 
 ## Step 6: Write the SLO document
+Create the file from your lab folder:
+
+```bash
+touch slo-document.md
+```
+
+<p align="center">
+  <a href="images/sllo-documents.png">
+    <img src="images/sllo-documents.png" alt="Terminal creating the empty slo-document.md file" width="1000">
+  </a>
+</p>
+
+**File creation:** `touch` creates `slo-document.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
+
 
 **Your task:** Create `slo-document.md`. Use the five headings in the example below and write a few sentences under each. Use your calculations to support your choice. Include:
 
@@ -558,6 +640,20 @@ The model helps with planning; live traffic may give different results.
 ---
 
 ## Step 7: Write the reliability report
+Create the file from your lab folder:
+
+```bash
+touch reliability-report.md
+```
+
+<p align="center">
+  <a href="images/reliability-report.png">
+    <img src="images/reliability-report.png" alt="Terminal creating the empty reliability-report.md file" width="1000">
+  </a>
+</p>
+
+**File creation:** `touch` creates `reliability-report.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
+
 
 **Your task:** Create `reliability-report.md`. Keep it to about one page. Use the example headings below to organize your explanation, and copy the results from your own `calculations.md`. Include:
 
@@ -638,6 +734,15 @@ reliability-lab/
   .venv/
 ```
 
+<p align="center">
+  <a href="images/whole-folder.png">
+    <img src="images/whole-folder.png" alt="Editor file explorer showing the six lab files and .venv folder" width="1000">
+  </a>
+</p>
+
+**Folder check:** All six deliverable files and the local virtual environment are present. Check that each file also contains its required content.
+
+
 Run the starting design first:
 
 ```bash
@@ -645,6 +750,15 @@ python3 analyze_topology.py topology.yaml
 ```
 
 **Explanation:** Calculates availability and compares the starting design with both targets.
+
+<p align="center">
+  <a href="images/analyze+topology-output.png">
+    <img src="images/analyze+topology-output.png" alt="Terminal baseline run reporting 99.740225 percent availability and MODEL FAIL for the 99.9 percent target" width="1000">
+  </a>
+</p>
+
+**Practical baseline run:** The new terminal capture matches the reference output below.
+
 
 <p align="center">
   <a href="images/baseline-output.png">
@@ -661,6 +775,15 @@ python3 analyze_topology.py topology-improved.yaml
 ```
 
 **Explanation:** Calculates the improved design with two copies of each app tier.
+
+<p align="center">
+  <a href="images/analyze+improved-topology.png">
+    <img src="images/analyze+improved-topology.png" alt="Terminal improved run reporting 99.939805 percent availability and MODEL PASS for both targets" width="1000">
+  </a>
+</p>
+
+**Practical improved run:** The new terminal capture matches the reference output below.
+
 
 <p align="center">
   <a href="images/improved-output.png">
