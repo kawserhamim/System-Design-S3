@@ -6,7 +6,7 @@
   </a>
 </p>
 
-Set a target for the Orders API. An **API** lets programs request actions. Use Python 3 and a text editor.
+Set a target for the Orders API. An **API** lets programs request actions. Use Node.js and a text editor.
 
 ## Objective
 
@@ -24,7 +24,7 @@ You will:
   </a>
 </p>
 
-Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.py`. **YAML** stores settings in text. Record three alert limits, called **thresholds**, but implement only the fast rule.
+Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.js`. **YAML** stores settings in text. Record three alert limits, called **thresholds**, but implement only the fast rule.
 
 ## Understand SLI and SLO
 
@@ -100,27 +100,43 @@ mkdir -p m3-l2 && cd m3-l2
 
 **Explanation:** Creates and opens the lab folder without printing output.
 
-Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day. The budget does not reset at the start of a calendar month. Paste into `calculate-budget.py`:
+Check that Node.js is installed:
 
-```python
-"""Calculate the request-based error budget used in this lab."""
+```bash
+node --version
+```
 
-valid_requests = 10_000_000
-bad_requests = 4_000
-slo = 0.999
-allowed_failures = round(valid_requests * (1 - slo))
-remaining = allowed_failures - bad_requests
-sli = (valid_requests - bad_requests) / valid_requests * 100
+If the command is unavailable, install Node.js using the Ubuntu/Debian setup from Lab 1. This calculator uses built-in JavaScript features and needs no npm packages.
 
-print(f"Valid requests:    {valid_requests:,}")
-print(f"SLO target:        {slo * 100:.1f}%")
-print(f"Allowed failures:  {allowed_failures:,}")
-print(f"Actual failures:   {bad_requests:,}")
-print(f"Failures remaining:{remaining:>10,}")
-print(f"Budget used:       {bad_requests / allowed_failures * 100:.0f}%")
-print(f"Budget remaining:  {remaining / allowed_failures * 100:.0f}%")
-print(f"Actual SLI:        {sli:.2f}%")
-print(f"SLO met:           {'Yes' if sli >= slo * 100 else 'No'}")
+
+Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day. The budget does not reset at the start of a calendar month. Paste into `calculate-budget.js`:
+
+```javascript
+// Calculate the request-based error budget used in this lab.
+const validRequests = 10_000_000;
+const badRequests = 4_000;
+const slo = 0.999;
+
+const allowedFailures = Math.round(validRequests * (1 - slo));
+const remaining = allowedFailures - badRequests;
+const sli = (validRequests - badRequests) / validRequests * 100;
+const budgetUsed = badRequests / allowedFailures * 100;
+const budgetRemaining = remaining / allowedFailures * 100;
+
+console.log("Valid requests:    ", validRequests.toLocaleString("en-US"));
+console.log("SLO target:        ", (slo * 100).toFixed(1) + "%");
+console.log("Allowed failures:  ", allowedFailures.toLocaleString("en-US"));
+console.log("Actual failures:   ", badRequests.toLocaleString("en-US"));
+console.log("Failures remaining:", remaining.toLocaleString("en-US"));
+console.log("Budget used:       ", budgetUsed.toFixed(0) + "%");
+console.log("Budget remaining:  ", budgetRemaining.toFixed(0) + "%");
+console.log("Actual SLI:        ", sli.toFixed(2) + "%");
+
+if (sli >= slo * 100) {
+  console.log("SLO met:            Yes");
+} else {
+  console.log("SLO met:            No");
+}
 ```
 
 **What this file does:** Calculates allowed failures, remaining budget, and the actual SLI.
@@ -227,7 +243,7 @@ groups:
 From `m3-l2`, run the saved calculator:
 
 ```bash
-python3 calculate-budget.py
+node calculate-budget.js
 ```
 
 **Explanation:** Prints the budget and measured good-request percentage.
@@ -237,6 +253,8 @@ python3 calculate-budget.py
     <img src="./images/budget-output.png" alt="Calculator output with 40 percent budget used and SLO met Yes" width="800">
   </a>
 </p>
+
+**Screenshot note:** The image above shows an earlier command. Run `node calculate-budget.js` for this version; the calculated values are the same.
 
 **What to expect:** **10,000** failures are allowed; **6,000** remain and **40%** is used. The **99.96%** SLI exceeds the target, so `SLO met` is `Yes`.
 
