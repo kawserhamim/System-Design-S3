@@ -2,7 +2,7 @@
 
 ![Set a reliability target, calculate its error budget, and alert on fast burn](./images/budget.png)
 
-Set a reliability target for an Orders API, a service that lets programs work with orders. Use a JavaScript calculator to find how many failures the target allows, then write an alert for failures that consume the allowance too quickly. You will validate the alert file without deploying the API or sending notifications.
+How do we know whether a service is reliable enough for its users? In this lab, you will set a reliability target for an Orders API, a service that lets programs work with orders, and build a simple Node.js calculator to find how many failed requests that target allows. You will then write and check an alert rule for when failures use up this allowance too quickly, without deploying the service. This will help you measure whether a service meets its target and understand when the team needs to investigate problems.
 
 ## Objective
 
