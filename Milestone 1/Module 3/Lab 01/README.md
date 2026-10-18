@@ -128,6 +128,7 @@ Paste this complete code into `availability.js`. It uses JavaScript and Node.jsâ
 ```javascript
 const fs = require("node:fs");
 
+// Convert 3 nines to 0.999, 4 nines to 0.9999, and so on.
 function probability(nines) {
   if (!Number.isFinite(nines) || nines < 1 || nines > 9) {
     throw new Error("nines must be between 1 and 9");
@@ -135,82 +136,94 @@ function probability(nines) {
   return 1 - 10 ** -nines;
 }
 
+// Every required part must work: multiply their availabilities.
 function serial(values) {
-  return values.reduce((product, value) => product * value, 1);
+  let result = 1;
+  for (const value of values) {
+    result = result * value;
+  }
+  return result;
 }
 
+// One copy is enough: find the chance that all copies fail.
 function parallel(values) {
-  return 1 - serial(values.map((value) => 1 - value));
+  let allFail = 1;
+  for (const value of values) {
+    allFail = allFail * (1 - value);
+  }
+  return 1 - allFail;
 }
 
-function report(label, value) {
-  const downtime = 1 - value;
-  const nines = downtime > 0
-    ? (-Math.log10(downtime)).toFixed(3)
-    : "beyond precision";
+function report(label, availability) {
+  const downtime = 1 - availability;
   console.log(label);
-  console.log(`  availability: ${(value * 100).toFixed(6)}%`);
-  console.log(`  nines:        ${nines}`);
-  console.log(`  downtime:     ${(downtime * 43200).toFixed(2)} min/month`);
-  console.log(`                ${(downtime * 525600).toFixed(2)} min/year`);
+  console.log("  availability:", (availability * 100).toFixed(6) + "%");
+  console.log("  downtime:", (downtime * 43200).toFixed(2), "min/month");
+  console.log("           ", (downtime * 525600).toFixed(2), "min/year");
   console.log();
 }
 
 function readSystem(path) {
-  const lines = fs.readFileSync(path, "utf8").trim().split(/\r?\n/);
-  if (lines[0].trim() !== "component,nines,group") {
+  const text = fs.readFileSync(path, "utf8");
+  const lines = text.trim().split(/\r?\n/);
+  if (lines[0] !== "component,nines,group") {
     throw new Error("CSV header must be component,nines,group");
   }
-  const groups = new Map();
+  const groups = Object.create(null);
+
+  // Skip the header, then put components into their groups.
   for (const line of lines.slice(1)) {
     if (!line.trim()) continue;
-    const cells = line.split(",").map((cell) => cell.trim());
-    const [component, nines, group] = cells;
-    if (cells.length !== 3 || !component || !nines || !group) {
+    const cells = line.split(",");
+    if (cells.length !== 3 || cells.some((cell) => !cell.trim())) {
       throw new Error("each row needs a component, nines, and group");
     }
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group).push(probability(Number(nines)));
+    const nines = Number(cells[1]);
+    const group = cells[2].trim();
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(probability(nines));
   }
-  if (groups.size === 0) throw new Error("CSV must contain components");
-  return serial([...groups.values()].map(parallel));
+
+  // Copies within a group are parallel; the groups are required.
+  const tiers = [];
+  for (const copies of Object.values(groups)) {
+    tiers.push(parallel(copies));
+  }
+  if (tiers.length === 0) throw new Error("CSV must contain components");
+  return serial(tiers);
 }
 
-function main() {
-  const args = process.argv.slice(2);
-  if (args.length === 1 && args[0] === "--demo") {
-    const a = probability(3);
-    report("single 99.9%", a);
-    report("serial 99.9% + 99.9%", serial([a, a]));
-    report("parallel 99.9% || 99.9%", parallel([a, a]));
-    report("combined LB -> (API || API) -> DB",
-      serial([a, parallel([a, a]), probability(4)]));
-  } else if (args.length === 2 && args[0] === "--csv") {
-    report("SYSTEM", readSystem(args[1]));
-  } else if (args[0] === "--nines") {
-    const topologyIndex = args.indexOf("--topology");
-    const inputs = args.slice(1, topologyIndex === -1 ? args.length : topologyIndex);
-    const topology = topologyIndex === -1 ? "serial" : args[topologyIndex + 1];
-    if (inputs.length === 0 || !["serial", "parallel"].includes(topology) ||
-        (topologyIndex !== -1 && topologyIndex + 2 !== args.length)) {
-      throw new Error("provide nines values and a serial or parallel topology");
-    }
-    const values = inputs.map((input) => probability(Number(input)));
-    report(topology, topology === "serial" ? serial(values) : parallel(values));
-  } else {
-    throw new Error("Usage: node availability.js --demo | --csv FILE | --nines N [N ...] [--topology serial|parallel]");
-  }
+function demo() {
+  const app = probability(3);
+  const database = probability(4);
+  const appGroup = parallel([app, app]);
+
+  report("single 99.9%", app);
+  report("serial 99.9% + 99.9%", serial([app, app]));
+  report("parallel 99.9% || 99.9%", appGroup);
+  report("combined LB -> (API || API) -> DB",
+    serial([app, appGroup, database]));
 }
+
+// Read the command typed after: node availability.js
+const command = process.argv[2];
+const csvPath = process.argv[3];
 
 try {
-  main();
+  if (command === "--demo" && process.argv.length === 3) {
+    demo();
+  } else if (command === "--csv" && csvPath && process.argv.length === 4) {
+    report("SYSTEM", readSystem(csvPath));
+  } else {
+    throw new Error("Use --demo or --csv components.csv");
+  }
 } catch (error) {
-  console.error(`Error: ${error.message}`);
+  console.error("Error:", error.message);
   process.exitCode = 1;
 }
 ```
 
-**What this file does:** Calculates availability and expected downtime from nines or CSV groups.
+**What this file does:** Converts nines to availability, combines components using simple loops, and prints availability and expected downtime. Use `--demo` for built-in examples or `--csv` for your own design.
 
 ---
 
@@ -244,7 +257,7 @@ node availability.js --demo
 
 **Explanation:** Runs the four built-in availability examples.
 
-**What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability, nines, and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
+**What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
 
 | Design | Availability | Yearly downtime |
 | --- | --- | --- |
@@ -260,13 +273,6 @@ node availability.js --csv components.csv
 ```
 
 **What to expect:** The `SYSTEM` report shows **99.889910%** availability and **578.63 minutes/year** of downtime.
-
-You can also compare components directly. Each number is a count of nines; the default topology is serial:
-
-```bash
-node availability.js --nines 3 3 --topology serial
-node availability.js --nines 3 3 --topology parallel
-```
 
 **CSV format:** Keep the header exactly as shown and use simple values without commas or quotation marks inside fields. The calculator reads this labâ€™s simple comma-separated format.
 
