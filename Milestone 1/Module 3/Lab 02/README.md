@@ -96,9 +96,10 @@ Create the practice folder:
 
 ```bash
 mkdir -p m3-l2 && cd m3-l2
+touch slo-document.md orders-api-rules.yaml calculate-budget.js
 ```
 
-**Explanation:** Creates and opens the lab folder without printing output.
+**Explanation:** Creates and opens the lab folder, then creates the three empty files. These commands normally print nothing. Add their contents in the steps below.
 
 Check that Node.js is installed:
 
