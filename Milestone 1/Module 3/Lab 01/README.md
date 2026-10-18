@@ -6,7 +6,7 @@
   </a>
 </p>
 
-Availability measures how much of the time a service is working and accessible to users. In this lab, you will build a Python calculator to explore how a URL shortener’s load balancer, app servers, and database affect its overall availability. You will compare designs with required components and backup copies, then translate the results into expected monthly and yearly downtime. Through these comparisons, you will learn which design changes help keep a service available and why adding more servers alone may not solve the problem—all without deploying real servers.
+Availability measures how much of the time a service is working and accessible to users. In this lab, you will build a Node.js calculator to explore how a URL shortener’s load balancer, app servers, and database affect its overall availability. You will compare designs with required components and backup copies, then translate the results into expected monthly and yearly downtime. Through these comparisons, you will learn which design changes help keep a service available and why adding more servers alone may not solve the problem—all without deploying real servers.
 
 ## Objective
 
@@ -18,7 +18,7 @@ By the end, you can:
 
 ## Deliverable
 
-A calculator in `availability.py` and a design in `components.csv`. A **CSV** is a text table with comma-separated columns.
+A calculator in `availability.js` and a design in `components.csv`. A **CSV** is a text table with comma-separated columns.
 
 ## Understand Availability and Nines
 
@@ -87,49 +87,31 @@ With three nines for the load balancer and apps, and four for the database, `0.9
 
 ## Step 1: Create the Project
 
-<p align="center">
-  <a href="./images/python-install.png">
-    <img src="./images/python-install.png" alt="Python version output showing Python 3.12.3" width="800">
-  </a>
-</p>
-
-Use an Ubuntu/Debian terminal. Install Python 3.8 or newer for the calculator:
+Use an Ubuntu/Debian terminal. Install Node.js, the runtime that executes JavaScript outside a browser:
 
 ```bash
 sudo apt update
-sudo apt install -y python3
-python3 --version
+sudo apt install -y nodejs
+node --version
 ```
 
-**Explanation:** Installs Python and prints its version.
+**Explanation:** Installs Node.js and prints its version. This calculator uses built-in Node.js modules, so no framework or npm packages are required.
 
-**What to expect:** Installation prints progress or says Python is already installed. The version line may differ from the screenshot's `Python 3.12.3`.
-
-<p align="center">
-  <a href="./images/file-command.png">
-    <img src="./images/file-command.png" alt="Terminal creating the project and listing both files" width="525">
-  </a>
-</p>
+**What to expect:** Installation prints progress or says Node.js is already installed. `node --version` prints a version starting with `v`.
 
 Create the folder and empty files:
 
 ```bash
 mkdir -p m3-l1 && cd m3-l1
-touch availability.py components.csv
+touch availability.js components.csv
 ls
 ```
 
 **Explanation:** Creates the project folder and lists its files.
 
-**What to expect:** The first two commands normally print nothing. `ls` lists `availability.py` and `components.csv`; open this folder in your editor.
+**What to expect:** The first two commands normally print nothing. `ls` lists `availability.js` and `components.csv`; open this folder in your editor.
 
-<p align="center">
-  <a href="./images/create-file.png">
-    <img src="./images/create-file.png" alt="The m3-l1 folder with availability.py and components.csv" width="300">
-  </a>
-</p>
-
-**In your editor:** Open `m3-l1`. The Explorer should show `availability.py` and `components.csv`, as pictured above. Both files are empty until you add their contents in the next steps.
+**In your editor:** Open `m3-l1`. The Explorer should show `availability.js` and `components.csv`. Both files are empty until you add their contents in the next steps.
 
 ---
 
@@ -141,73 +123,91 @@ Nines -> availability -> serial or parallel formula -> downtime
 
 **Explanation:** The calculator converts inputs, combines parts, and prints results.
 
-Paste this complete code into `availability.py`. It uses Python's built-in libraries:
+Paste this complete code into `availability.js`. It uses JavaScript and Node.js’s built-in file system module:
 
-```python
-import argparse
-import csv
-import math
+```javascript
+const fs = require("node:fs");
 
-def probability(nines):
-    if not math.isfinite(nines) or not 1 <= nines <= 9:
-        raise ValueError("nines must be between 1 and 9")
-    return 1 - 10 ** -nines
+function probability(nines) {
+  if (!Number.isFinite(nines) || nines < 1 || nines > 9) {
+    throw new Error("nines must be between 1 and 9");
+  }
+  return 1 - 10 ** -nines;
+}
 
-def serial(values):
-    return math.prod(values)
+function serial(values) {
+  return values.reduce((product, value) => product * value, 1);
+}
 
-def parallel(values):
-    return 1 - math.prod(1 - value for value in values)
+function parallel(values) {
+  return 1 - serial(values.map((value) => 1 - value));
+}
 
-def report(label, value):
-    downtime = 1 - value
-    nines = f"{-math.log10(downtime):.3f}" if downtime else "beyond precision"
-    print(label)
-    print(f"  availability: {value * 100:.6f}%")
-    print(f"  nines:        {nines}")
-    print(f"  downtime:     {downtime * 43200:.2f} min/month")
-    print(f"                {downtime * 525600:.2f} min/year")
-    print()
+function report(label, value) {
+  const downtime = 1 - value;
+  const nines = downtime > 0
+    ? (-Math.log10(downtime)).toFixed(3)
+    : "beyond precision";
+  console.log(label);
+  console.log(`  availability: ${(value * 100).toFixed(6)}%`);
+  console.log(`  nines:        ${nines}`);
+  console.log(`  downtime:     ${(downtime * 43200).toFixed(2)} min/month`);
+  console.log(`                ${(downtime * 525600).toFixed(2)} min/year`);
+  console.log();
+}
 
-def read_system(path):
-    groups = {}
-    with open(path, newline="") as source:
-        for row in csv.DictReader(source):
-            group = row["group"].strip()
-            if not group or not row["component"].strip():
-                raise ValueError("component and group must not be empty")
-            groups.setdefault(group, []).append(probability(float(row["nines"])))
-    if not groups:
-        raise ValueError("CSV must contain components")
-    return serial(parallel(copies) for copies in groups.values())
+function readSystem(path) {
+  const lines = fs.readFileSync(path, "utf8").trim().split(/\r?\n/);
+  if (lines[0].trim() !== "component,nines,group") {
+    throw new Error("CSV header must be component,nines,group");
+  }
+  const groups = new Map();
+  for (const line of lines.slice(1)) {
+    if (!line.trim()) continue;
+    const cells = line.split(",").map((cell) => cell.trim());
+    const [component, nines, group] = cells;
+    if (cells.length !== 3 || !component || !nines || !group) {
+      throw new Error("each row needs a component, nines, and group");
+    }
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(probability(Number(nines)));
+  }
+  if (groups.size === 0) throw new Error("CSV must contain components");
+  return serial([...groups.values()].map(parallel));
+}
 
-def main():
-    parser = argparse.ArgumentParser(description="Calculate system availability")
-    inputs = parser.add_mutually_exclusive_group(required=True)
-    inputs.add_argument("--nines", nargs="+", type=float)
-    inputs.add_argument("--csv")
-    inputs.add_argument("--demo", action="store_true")
-    parser.add_argument("--topology", choices=["serial", "parallel"], default="serial")
-    args = parser.parse_args()
-    try:
-        if args.demo:
-            a = probability(3)
-            report("single 99.9%", a)
-            report("serial 99.9% + 99.9%", serial([a, a]))
-            report("parallel 99.9% || 99.9%", parallel([a, a]))
-            report("combined LB -> (API || API) -> DB",
-                   serial([a, parallel([a, a]), probability(4)]))
-        elif args.csv:
-            report("SYSTEM", read_system(args.csv))
-        else:
-            values = [probability(n) for n in args.nines]
-            calculate = serial if args.topology == "serial" else parallel
-            report(args.topology, calculate(values))
-    except (ValueError, KeyError, OSError) as error:
-        parser.error(str(error))
+function main() {
+  const args = process.argv.slice(2);
+  if (args.length === 1 && args[0] === "--demo") {
+    const a = probability(3);
+    report("single 99.9%", a);
+    report("serial 99.9% + 99.9%", serial([a, a]));
+    report("parallel 99.9% || 99.9%", parallel([a, a]));
+    report("combined LB -> (API || API) -> DB",
+      serial([a, parallel([a, a]), probability(4)]));
+  } else if (args.length === 2 && args[0] === "--csv") {
+    report("SYSTEM", readSystem(args[1]));
+  } else if (args[0] === "--nines") {
+    const topologyIndex = args.indexOf("--topology");
+    const inputs = args.slice(1, topologyIndex === -1 ? args.length : topologyIndex);
+    const topology = topologyIndex === -1 ? "serial" : args[topologyIndex + 1];
+    if (inputs.length === 0 || !["serial", "parallel"].includes(topology) ||
+        (topologyIndex !== -1 && topologyIndex + 2 !== args.length)) {
+      throw new Error("provide nines values and a serial or parallel topology");
+    }
+    const values = inputs.map((input) => probability(Number(input)));
+    report(topology, topology === "serial" ? serial(values) : parallel(values));
+  } else {
+    throw new Error("Usage: node availability.js --demo | --csv FILE | --nines N [N ...] [--topology serial|parallel]");
+  }
+}
 
-if __name__ == "__main__":
-    main()
+try {
+  main();
+} catch (error) {
+  console.error(`Error: ${error.message}`);
+  process.exitCode = 1;
+}
 ```
 
 **What this file does:** Calculates availability and expected downtime from nines or CSV groups.
@@ -216,13 +216,7 @@ if __name__ == "__main__":
 
 ## Step 3: Write the System CSV
 
-<p align="center">
-  <a href="./images/csv-system-output.png">
-    <img src="./images/csv-system-output.png" alt="Original SYSTEM report with 578.63 minutes of yearly downtime" width="800">
-  </a>
-</p>
-
-This screenshot shows a sample report for the CSV design below. `SYSTEM` has **99.889910%** availability and **578.63 minutes** of yearly downtime. The demo produces the same values under its combined-design heading.
+For the CSV design below, `SYSTEM` has **99.889910%** availability and **578.63 minutes** of yearly downtime. The demo produces the same values under its combined-design heading.
 
 Save the original design in `components.csv`:
 
@@ -240,21 +234,15 @@ Rows in the same group are alternatives. Different groups are required. Both `ap
 
 ---
 
-## 4. Run the following command in the terminal
+## Step 4: Run the Calculator
 
-Run from `m3-l1` after saving `availability.py`:
+Run from `m3-l1` after saving `availability.js`:
 
 ```bash
-python3 availability.py --demo
+node availability.js --demo
 ```
 
 **Explanation:** Runs the four built-in availability examples.
-
-<p align="center">
-  <a href="./images/demo-output.png">
-    <img src="./images/demo-output.png" alt="Demo reports comparing single, serial, parallel, and combined designs" width="800">
-  </a>
-</p>
 
 **What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability, nines, and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
 
@@ -265,17 +253,34 @@ python3 availability.py --demo
 | Two alternative apps | 99.999900% | 0.53 minutes |
 | Original combined design | 99.889910% | 578.63 minutes |
 
+Calculate the design saved in your CSV file:
+
+```bash
+node availability.js --csv components.csv
+```
+
+**What to expect:** The `SYSTEM` report shows **99.889910%** availability and **578.63 minutes/year** of downtime.
+
+You can also compare components directly. Each number is a count of nines; the default topology is serial:
+
+```bash
+node availability.js --nines 3 3 --topology serial
+node availability.js --nines 3 3 --topology parallel
+```
+
+**CSV format:** Keep the header exactly as shown and use simple values without commas or quotation marks inside fields. The calculator reads this lab’s simple comma-separated format.
+
 ### Improve the Load Balancer
 
-<p align="center">
-  <a href="./images/improved-lb-output.png">
-    <img src="./images/improved-lb-output.png" alt="Improved SYSTEM report with 105.64 minutes of yearly downtime" width="800">
-  </a>
-</p>
+In `components.csv`, change `LB-1,3,lb` to `LB-1,4,lb`, leaving the apps and database unchanged. Save the file and run the CSV calculation again:
 
-The screenshot above shows a design with a four-nine load balancer against the original three-nine design. The apps and database stay the same. This is a separate example, not an extra report from `--demo`.
+```bash
+node availability.js --csv components.csv
+```
 
-**Read this example:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Improving a real service needs engineering work.
+This run uses your updated CSV; `--demo` always uses its original built-in values.
+
+**What to expect:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Improving a real service needs engineering work.
 
 ---
 
