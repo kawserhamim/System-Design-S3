@@ -1,113 +1,66 @@
 # SLO & Error Budget Definition
 
-<p align="center">
-  <a href="./images/budget.png">
-    <img src="./images/budget.png" alt="Set the target, calculate the budget, and alert on fast burn" width="800">
-  </a>
-</p>
+![Set a reliability target, calculate its error budget, and alert on fast burn](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/budget.png)
 
-Set a target for the Orders API. An **API** lets programs request actions. Use Node.js and a text editor.
+Set a reliability target for an Orders API, a service that lets programs work with orders. Use a JavaScript calculator to find how many failures the target allows, then write an alert for failures that consume the allowance too quickly. You will validate the alert file without deploying the API or sending notifications.
 
 ## Objective
 
-You will:
+By the end of this lab, you can:
 
-- Define good and bad requests.
-- Set a 99.9% target over 30 days.
-- Calculate the budget and write a fast-burn alert.
+- Define good, bad, and skipped requests.
+- Set a 99.9% target over 30 days and calculate its budget.
+- Write and validate a fast-burn alert.
 
 ## Deliverable
 
-Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.js`. **YAML** stores settings in text. Record three alert limits, called **thresholds**, but implement only the fast rule.
+![Overview of the SLO document and YAML alert configuration](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/what-you-create.png)
 
-The diagram outlines the SLO document and alert configuration. You will also create a JavaScript calculator to check the budget values.
+Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.js`. YAML stores settings in text. Use `.yaml`; the diagram uses the equivalent `.yml` extension.
 
-<p align="center">
-  <a href="./images/what-you-create.png">
-    <img src="./images/what-you-create.png" alt="Overview of the SLO document and alert configuration" width="700">
-  </a>
-</p>
-
-Use `orders-api-rules.yaml` throughout this lab; the diagram labels it `.yml`, which is another YAML extension. The diagram mentions both 14.4x and 6x thresholds; here, the YAML implements only the 14.4x fast alert, while the document records all three thresholds.
+Record all three alert thresholds, or limits, in the document. Implement only the 14.4x fast rule in YAML; the diagram's 6x rule is outside this exercise.
 
 ## Understand SLI and SLO
 
-<p align="center">
-  <a href="./images/which-requests-orginal.png">
-    <img src="./images/which-requests-orginal.png" alt="Exclude skipped requests before counting good and bad responses" width="650">
-  </a>
-</p>
+![Skip cancellations and health checks before counting good and bad requests](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/which-requests-orginal.png)
 
-Read the picture from top to bottom: remove skipped requests, then split the rest into good and bad.
+A service level indicator (SLI) measures reliability. A service level objective (SLO) sets its target: **99.9%** of counted requests without server errors over 30 days. Skip excluded requests, then count good and bad responses.
 
-A **service level indicator (SLI)** measures reliability. A **service level objective (SLO)** sets the target: **99.9%** of counted requests without server errors over 30 days.
-
-An **HTTP status code** describes a response. Exclude cancellations (`499`) and health checks (`/healthz`). Count other `2xx`, `3xx`, and `4xx` as good. Codes 500 through 599 (`5xx`) are bad. Good means no server error. For example, 9,996 good requests out of 10,000 gives a **99.96%** SLI, above the **99.9%** SLO. A `404` counts as good here even though the requested item was not found.
+HTTP status codes describe responses. Count `2xx`, `3xx`, and `4xx` as good, except skipped `499` cancellations; count `5xx` as bad. Skip all `/healthz` health checks. A `404` counts as good here because this target measures server errors.
 
 ## Understand Error Budgets and Burn Rate
 
-<p align="center">
-  <a href="./images/burn-rate-alerting.png">
-    <img src="./images/burn-rate-alerting.png" alt="Burn thresholds with long and short windows" width="800">
-  </a>
-</p>
+![Fast, medium, and slow burn thresholds with two time windows](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/burn-rate-alerting.png)
 
-The **error budget** is the number of failures the target allows. A 99.9% target allows **0.1%** failures: one per 1,000 counted requests. **Burn rate** compares the measured failure percentage with that allowance: `1.44% / 0.1% = 14.4x`. At **1x**, errors use the budget at the allowed rate. At **14.4x**, they use it 14.4 times as fast.
+The error budget is the number of failures the target allows. A 99.9% target allows **0.1%** failures. Burn rate compares the observed error percentage with that allowance: `1.44% / 0.1% = 14.4x`.
 
-A **window** is the time period we look back over. The long window checks lasting errors; the short one checks recent errors. Both must exceed the limit. If the hour shows 2% errors but the last five minutes show 0.2%, the fast alert does not start. The short window shows that the service has recovered.
+A window is the period we look back over. Both a long and a short window must exceed the threshold, so an old outage alone does not trigger a new alert.
 
-| Threshold | Long + short window | Failure percentage | Action |
+| Threshold | Long + short window | Errors | Action |
 | --- | --- | --- | --- |
-| 14.4x (fast) | 1 hour + 5 minutes | Above 1.44% | Urgent message |
-| 6x (medium) | 6 hours + 30 minutes | Above 0.60% | Urgent message |
-| 1x (slow) | 3 days + 6 hours | Above 0.10% | Create task |
+| Fast, 14.4x | 1 hour + 5 minutes | Above 1.44% | Urgent message |
+| Medium, 6x | 6 hours + 30 minutes | Above 0.60% | Urgent message |
+| Slow, 1x | 3 days + 6 hours | Above 0.10% | Create task |
 
-At steady traffic and errors, 14.4x uses a full 30-day allowance in `30 / 14.4`, about **2.08 days**. This budget counts requests.
-
-## Prerequisite: Set Up Node.js
-
-### Install Node.js
-
-Run these installation commands in an Ubuntu/Debian terminal:
-
-```bash
-sudo apt update
-sudo apt install -y nodejs
-```
-
-### Check the Node.js Version
-
-After installation, run:
-
-```bash
-node --version
-```
-
-<p align="center">
-  <a href="./images/node-version.png">
-    <img src="./images/node-version.png" alt="Terminal showing node --version and Node.js v22.16.0" width="800">
-  </a>
-</p>
-
-**What to expect:** A version number starting with `v`; the screenshot shows `v22.16.0`, and yours may differ. If Node.js is already installed from Lab 1, you can skip installation and run only the version check. This calculator uses built-in JavaScript features and needs no npm packages.
+At steady traffic and errors, 14.4x consumes a full 30-day budget in about **2.08 days**. This lab counts requests, not downtime minutes.
 
 ## Step 1: Define the Request Rules
 
 ```text
-All requests -> exclude 499 and /healthz -> good + bad
+All requests -> skip 499 and /healthz -> good + bad
 SLI = good / (good + bad) * 100
 ```
 
-**Explanation:** Skipped requests do not enter either count.
+**Explanation:** Skipped requests enter neither count.
 
-Use these rules throughout:
+Apply these rules:
 
 | Response | Count as | Reason |
 | --- | --- | --- |
 | `200` or `302` | Good | No server error |
 | `404` | Good | Client error |
 | `499` | Skip | Client cancelled |
-| `500` or `504` | Bad | Server error or gateway timeout |
+| `500` or `504` | Bad | Server error |
 | Any `/healthz` | Skip | Health check |
 
 For 999 good and one bad request, the SLI is **99.9%**.
@@ -116,14 +69,26 @@ For 999 good and one bad request, the SLI is **99.9%**.
 
 ## Step 2: Write the Budget Calculator
 
-```text
-Counted requests * 0.001 = allowed failures
-Allowed failures - actual failures = remaining budget
+![Node.js version check showing v22.16.0](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/node-version.png)
+
+Install Node.js in an Ubuntu/Debian terminal, or skip installation if you completed Lab 1:
+
+```bash
+sudo apt update
+sudo apt install -y nodejs
 ```
 
-**Explanation:** A 99.9% target leaves 0.1%, or 0.001, for failures.
+**Explanation:** Installs the runtime for the JavaScript calculator.
 
-Create the practice folder:
+```bash
+node --version
+```
+
+**Explanation:** Prints the installed version, which may differ from the screenshot.
+
+![Terminal creating m3-l2 and listing all three lab files](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/file-create.png)
+
+Create the practice folder and files:
 
 ```bash
 mkdir -p m3-l2 && cd m3-l2
@@ -131,23 +96,11 @@ touch slo-document.md orders-api-rules.yaml calculate-budget.js
 ls
 ```
 
-**Explanation:** Creates and opens the lab folder, then creates the three empty files. `ls` lists their names, as shown below.
+**Explanation:** Creates three empty files and lists their names.
 
-<p align="center">
-  <a href="./images/file-create.png">
-    <img src="./images/file-create.png" alt="Terminal creating m3-l2 and listing the three lab files" width="800">
-  </a>
-</p>
+![Editor Explorer showing the calculator, alert rule, and SLO document](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/folder-structure.png)
 
-**In your editor:** Open `m3-l2`. Check that the Explorer contains `calculate-budget.js`, `orders-api-rules.yaml`, and `slo-document.md`. Add their contents in the following steps.
-
-<p align="center">
-  <a href="./images/folder-structure.png">
-    <img src="./images/folder-structure.png" alt="Editor Explorer showing all three files in m3-l2" width="400">
-  </a>
-</p>
-
-Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day. The budget does not reset at the start of a calendar month. Paste into `calculate-budget.js`:
+Open `m3-l2` in your editor. Use 10,000,000 counted requests and 4,000 errors from a rolling 30-day window, meaning the latest 30 days rather than a calendar month. Paste this into `calculate-budget.js`; no npm packages are needed.
 
 ```javascript
 // Calculate the request-based error budget used in this lab.
@@ -177,9 +130,9 @@ if (sli >= slo * 100) {
 }
 ```
 
-**What this file does:** Calculates allowed failures, remaining budget, and the actual SLI.
+**What this file does:** Calculates allowed failures, remaining budget, and actual SLI.
 
-The 10,000-failure budget comes from `10,000,000 * 0.001`. Using 4,000 leaves 6,000 and uses **40%** of the budget. The 40% tells you how much of the allowed failures you have used.
+The budget is `10,000,000 * 0.001 = 10,000`. Using 4,000 failures leaves 6,000, so **40%** is used and **60%** remains.
 
 ---
 
@@ -189,7 +142,7 @@ The 10,000-failure budget comes from `10,000,000 * 0.001`. Using 4,000 leaves 6,
 Request rules -> target -> failure allowance -> alert limits
 ```
 
-**Explanation:** The document records how the team measures and responds to failures.
+**Explanation:** Record one shared definition of reliability for the team.
 
 Save this complete document as `slo-document.md`:
 
@@ -228,23 +181,17 @@ Allowed failures = valid requests * 0.001.
 | Slow | 3d + 6h | >1x | >0.10% | Ticket |
 ```
 
-**What this file does:** Records request rules, the target, budget, and alert limits.
+**What this file does:** Records request rules, ownership, the target, budget, and three alert thresholds.
 
-A **retry** is another attempt. Count each separately. A **gateway** receives requests before the service.
+A gateway receives requests before the service. A retry is another attempt; count each attempt separately.
 
 ---
 
 ## Step 4: Write the Alert Rule
 
-The diagram shows the condition you will encode: errors must exceed 1.44% in both the last hour and the last five minutes, continuously for two minutes.
+![Both error windows must exceed 1.44 percent for two minutes](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/fast-alert.png)
 
-<p align="center">
-  <a href="./images/fast-alert.png">
-    <img src="./images/fast-alert.png" alt="Both windows exceed 1.44% for two minutes before the alert fires" width="700">
-  </a>
-</p>
-
-**Prometheus** collects measurements; **PromQL** calculates values from them. A **counter** increases as requests arrive. Save this as `orders-api-rules.yaml`:
+Prometheus collects measurements; PromQL calculates values from them. A counter increases as requests arrive. Save this rule as `orders-api-rules.yaml`:
 
 ```yaml
 groups:
@@ -270,17 +217,19 @@ groups:
           summary: "orders-api is burning its error budget fast"
 ```
 
-**What this file does:** Alerts when both error percentages stay above 1.44% for two minutes.
+**What this file does:** Defines a fast alert when both error percentages exceed 1.44% for two minutes.
 
-**Labels** are names attached to a measurement. Here, they identify the service (`job`), response code (`code`), and request path (`route`). `rate()` calculates requests per second. `sum()` combines counts. The query calculates the share of requests that failed. The decimal `0.0144` means 1.44%. With 100 requests per second and 98 good ones, `1 - 98 / 100 = 0.02`, or **2%** errors. The error rate in both windows must be above 1.44%.
+Labels identify the service (`job`), response code (`code`), and path (`route`). `rate()` calculates requests per second, and `sum()` combines them. The expression calculates `1 - good / valid`; `0.0144` means 1.44% errors.
 
-`and` requires both windows to be above the limit. `for: 2m` waits two minutes while this stays true. If either falls to the limit or below, the wait clears. To send messages, run Prometheus and set up where alerts should go.
+`and` requires both windows to exceed the limit. `for: 2m` requires that condition to continue for two minutes. Notifications need a running Prometheus setup with alert delivery configured.
 
 ---
 
 ## Step 5: Run the Calculator and Validate the Rule
 
-From `m3-l2`, run the saved calculator:
+![Node.js calculator output showing 40 percent budget used and SLO met](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/budget-output.png)
+
+From `m3-l2`, run the calculator:
 
 ```bash
 node calculate-budget.js
@@ -288,34 +237,28 @@ node calculate-budget.js
 
 **Explanation:** Prints the budget and measured good-request percentage.
 
-<p align="center">
-  <a href="./images/budget-output.png">
-    <img src="./images/budget-output.png" alt="Calculator output with 40 percent budget used and SLO met Yes" width="800">
-  </a>
-</p>
-
-**What to expect:** **10,000** failures are allowed; **6,000** remain and **40%** is used. The **99.96%** SLI exceeds the target, so `SLO met` is `Yes`.
+**What to expect:** **10,000** failures allowed, **6,000** remaining, and **40%** used. The **99.96%** SLI meets the target.
 
 ### Download the Rule Tool
 
-After checking the budget, validate the YAML alert rule using `promtool`, the Prometheus rule-file tool. Stay in `m3-l2` for the download, extraction, and validation commands. These commands need `curl` and `tar` on Linux with a 64-bit Intel or AMD processor:
+![Prometheus archive download in progress at 11 percent](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/download-output.png)
+
+Stay in `m3-l2`. These commands use `curl` and `tar` on Linux with a 64-bit Intel or AMD processor.
 
 ```bash
 # paste this as one line
 curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
 ```
 
-**Explanation:** Downloads the archive containing the tool.
+**Explanation:** Downloads the archive containing `promtool`, the rule-file validation tool.
 
-<p align="center">
-  <a href="./images/download-output.png">
-    <img src="./images/download-output.png" alt="Download progress at 11 percent" width="900">
-  </a>
-</p>
-
-**What to expect:** The screenshot shows **11%**. Wait for `100` and the prompt before extracting.
+**What to expect:** The screenshot shows 11%; wait for 100% and the prompt before extracting.
 
 ### Extract the Tool
+
+![Extraction command and promtool filename](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/extract-output.png)
+
+Extract only the validation tool:
 
 ```bash
 # paste the tar command as one line
@@ -323,34 +266,26 @@ tar -xzf prometheus-3.5.0.linux-amd64.tar.gz prometheus-3.5.0.linux-amd64/promto
 ls prometheus-3.5.0.linux-amd64
 ```
 
-**Explanation:** Extracts only the tool and lists its folder.
+**Explanation:** Extracts `promtool` and lists its folder.
 
-<p align="center">
-  <a href="./images/extract-output.png">
-    <img src="./images/extract-output.png" alt="Extraction command followed by the promtool filename" width="900">
-  </a>
-</p>
+**What to expect:** `tar` prints nothing; `ls` prints `promtool`.
 
-**What to expect:** `tar` prints nothing; `ls` prints `promtool`. Paste the command as one line.
+### Validate the Rule
 
-### Run the Rule Tool
+![Promtool reports SUCCESS: 1 rules found](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/run-output.png)
+
+Use `m3-l2`, not the screenshot directory:
 
 ```bash
 ./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
 ```
 
-**Explanation:** Reads the rule file and reports whether it is written correctly.
+**Explanation:** Checks the YAML and PromQL rule syntax.
 
-<p align="center">
-  <a href="./images/run-output.png">
-    <img src="./images/run-output.png" alt="Checking orders-api-rules.yaml and SUCCESS: 1 rules found" width="900">
-  </a>
-</p>
-
-**What to expect:** `SUCCESS: 1 rules found` means the rule was accepted. The screenshot uses a different practice directory; use your `m3-l2` folder rather than copying its `cd` path. This check validates the rule file and does not send alerts.
+**What to expect:** `SUCCESS: 1 rules found`; this validates the file without sending alerts.
 
 ---
 
 ## Conclusion
 
-You set a 99.9% target, which allows 10,000 failures out of 10,000,000 counted requests; the example used 4,000 failures and left 6,000 in the budget. The fast-burn rule warns when errors use that budget too quickly, but sending the warning needs a running Prometheus setup with alert delivery configured. Next, spread requests across servers and switch to working copies when a server fails to help the service stay within its target.
+The error budget connects a reliability target to an allowed number of failures. A fast-burn alert helps identify when that allowance is being used too quickly. Next, model system topology to check whether a design can support its reliability target.

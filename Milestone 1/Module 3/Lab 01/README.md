@@ -1,71 +1,57 @@
 # Availability Math
 
-<p align="center">
-  <a href="./images/availability.png">
-    <img src="./images/availability.png" alt="Choose a design, calculate availability, and compare downtime" width="800">
-  </a>
-</p>
+![Choose a design, calculate availability, and compare downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability.png)
 
-Availability measures how much of the time a service is working and accessible to users. In this lab, you will build a Node.js calculator to explore how a URL shortener’s load balancer, app servers, and database affect its overall availability. You will compare designs with required components and backup copies, then translate the results into expected monthly and yearly downtime. Through these comparisons, you will learn which design changes help keep a service available and why adding more servers alone may not solve the problem—all without deploying real servers.
+Availability measures how much of the time a service is working for its users. Build a Node.js calculator to compare a URL shortener's load balancer, apps, and database without deploying servers. You will turn availability into expected downtime and learn which design changes help keep the service working.
 
 ## Objective
 
-By the end, you can:
+By the end of this lab, you can:
 
 - Explain availability and nines.
-- Calculate required parts and alternative copies.
-- Estimate downtime and improve a shared part.
+- Calculate availability for required parts and backup copies.
+- Compare downtime and improve a shared dependency.
 
 ## Deliverable
 
-A calculator in `availability.js` and a design in `components.csv`. A **CSV** is a text table with comma-separated columns.
+A working calculator in `availability.js` and a system design in `components.csv`. A CSV is a text table with comma-separated columns.
 
 ## Understand Availability and Nines
 
-**Availability** is working time divided by total time. **Nines** counts the 9s in the percentage. Three nines means 99.9%, or `0.999` in a formula: 999 working minutes out of 1,000.
+```text
+3 nines -> 99.9% working time -> 0.1% downtime
+```
 
-| Nines | Availability | Downtime per 30-day month | Downtime per 365-day year |
+**Explanation:** Each extra nine reduces expected downtime to one tenth.
+
+Availability is working time divided by total time. Three nines means 99.9%, or `0.999` in a formula. A 30-day month has 43,200 minutes; a 365-day year has 525,600 minutes.
+
+| Nines | Availability | Downtime/month | Downtime/year |
 | --- | --- | --- | --- |
-| 2 | 99% | 432 minutes | 5,256 minutes |
-| 3 | 99.9% | 43.2 minutes | 525.6 minutes |
-| 4 | 99.99% | 4.32 minutes | 52.56 minutes |
-| 5 | 99.999% | 0.432 minutes | 5.256 minutes |
+| 2 | 99% | 432 min | 5,256 min |
+| 3 | 99.9% | 43.2 min | 525.6 min |
+| 4 | 99.99% | 4.32 min | 52.56 min |
+| 5 | 99.999% | 0.432 min | 5.256 min |
 
-Calculate yearly downtime with `(1 - availability) * 525600`. At three nines, this gives **525.6 minutes**. Each extra nine reduces downtime to one tenth. These totals do not predict when outages happen. A 30-day month has 43,200 minutes, so three nines gives `43,200 * 0.001 = 43.2` minutes of downtime.
+Expected yearly downtime is `(1 - availability) * 525600`. It estimates a total, not when an outage will happen.
 
 ## Serial: Every Part Must Work
 
-<p align="center">
-  <a href="./images/serial.png">
-    <img src="./images/serial.png" alt="A failed app stops the request from reaching the database" width="800">
-  </a>
-</p>
+![A failed app prevents requests from reaching the database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial.png)
 
-The request needs the load balancer, app, and database. In the picture, the app is down, so a working database cannot finish the request alone. **Independent failures** means one part failing does not change another part's failure chance.
-
-For independent required parts, multiply their availabilities. Two three-nine parts give `0.999 * 0.999 = 0.998001`, or **99.8001%**. Adding required parts adds ways for the request to fail. Both must work at the same time, so the combined result is lower than either part alone.
+The request needs the load balancer, app, and database. For independent failures, multiply their availabilities: `0.999 * 0.999 = 0.998001`, or **99.8001%**. Independent means one failure does not change another part's failure chance. More required parts add more ways to fail.
 
 ## Parallel: One Copy Is Enough
 
-<p align="center">
-  <a href="./images/parallel.png">
-    <img src="./images/parallel.png" alt="One app handles requests while the other is down" width="800">
-  </a>
-</p>
+![One app serves requests while the other app is down](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/parallel.png)
 
-A **replica** is another copy that does the same job. Two alternative apps work as a group if either works. Each fails with probability `0.001`, so both independent apps fail together with probability `0.001 * 0.001`.
-
-Subtract that from one: `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. This covers the app group only. The surviving app must handle the traffic alone. If App 2 stops, App 1 can still serve requests. The group fails only when both stop; that is why we subtract the chance of both failing from one.
+A replica is another copy doing the same job. Two independent three-nine apps fail together with probability `0.001 * 0.001`. Their group availability is `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. The surviving copy must handle the traffic alone.
 
 ## Compare the Designs
 
-<p align="center">
-  <a href="./images/availability-calculation-result.png">
-    <img src="./images/availability-calculation-result.png" alt="Yearly downtime for single, serial, and parallel designs" width="800">
-  </a>
-</p>
+![Yearly downtime for single, serial, and parallel designs](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-calculation-result.png)
 
-All parts in this picture have 99.9% availability. The serial design needs both parts; the parallel group needs only one. Their connections change the expected downtime:
+Every part below has 99.9% availability. The connections change the result.
 
 | Design | Availability | Yearly downtime |
 | --- | --- | --- |
@@ -75,37 +61,34 @@ All parts in this picture have 99.9% availability. The serial design needs both 
 
 ## Combined: Calculate the Group First
 
-<p align="center">
-  <a href="./images/combine.png">
-    <img src="./images/combine.png" alt="Required load balancer, alternative apps, and required database" width="800">
-  </a>
-</p>
+![Required load balancer, two alternative apps, and required database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/combine.png)
 
-A **tier** is a part or group doing one role. Read the picture as `LB -> (App 1 || App 2) -> DB`; `||` means alternatives. Calculate the app group first, then multiply the required tiers. Treat the two apps as one group with availability `0.999999`. The request still needs the load balancer and database.
+Read this as `LB -> (App 1 || App 2) -> DB`; `||` means alternatives. Calculate the app group first, then multiply the required tiers, or groups doing one role. With three-nine load balancer and apps, and a four-nine database, `0.999 * 0.999999 * 0.9999` gives **99.889910%**.
 
-With three nines for the load balancer and apps, and four for the database, `0.999 * 0.999999 * 0.9999` gives **99.889910%**. Both apps need the same load balancer and database, called **shared dependencies**. Either shared part can stop both apps. Two apps on one failed machine also fail together.
+The load balancer and database are shared dependencies: either can stop both apps. Copies on one failed machine also fail together, so the independence assumption would not hold.
 
 ## Step 1: Create the Project
 
-Use an Ubuntu/Debian terminal. Install Node.js, the runtime that executes JavaScript outside a browser:
+![Node.js version check showing v22.16.0](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/node-install.png)
+
+Install Node.js in an Ubuntu/Debian terminal. Skip installation if it is already available.
 
 ```bash
 sudo apt update
 sudo apt install -y nodejs
+```
+
+**Explanation:** Installs the runtime that runs JavaScript outside a browser.
+
+```bash
 node --version
 ```
 
-**Explanation:** Installs Node.js and prints its version. This calculator uses built-in Node.js modules, so no framework or npm packages are required.
+**Explanation:** Prints your Node.js version, which may differ from the screenshot.
 
-**What to expect:** Installation prints progress or says Node.js is already installed. `node --version` prints a version starting with `v`.
+![Terminal creating m3-l1 and listing the calculator and CSV files](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/file-command.png)
 
-<p align="center">
-  <a href="./images/node-install.png">
-    <img src="./images/node-install.png" alt="Terminal showing node --version and Node.js v22.16.0" width="800">
-  </a>
-</p>
-
-Create the folder and empty files:
+Create the project files:
 
 ```bash
 mkdir -p m3-l1 && cd m3-l1
@@ -113,35 +96,23 @@ touch availability.js components.csv
 ls
 ```
 
-**Explanation:** Creates the project folder and lists its files.
+**Explanation:** Creates the folder and two empty files, then lists their names.
 
-**What to expect:** The first two commands normally print nothing. `ls` lists `availability.js` and `components.csv`; open this folder in your editor.
+![Editor showing availability.js and components.csv in m3-l1](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/create-file.png)
 
-<p align="center">
-  <a href="./images/file-command.png">
-    <img src="./images/file-command.png" alt="Terminal creating m3-l1 and listing availability.js and components.csv" width="800">
-  </a>
-</p>
-
-**In your editor:** Open `m3-l1`. The Explorer should show `availability.js` and `components.csv`. Both files are empty until you add their contents in the next steps.
-
-<p align="center">
-  <a href="./images/create-file.png">
-    <img src="./images/create-file.png" alt="Editor Explorer showing availability.js and components.csv in m3-l1" width="350">
-  </a>
-</p>
+Open `m3-l1` in your editor. Both files should appear as shown; no npm packages are needed.
 
 ---
 
 ## Step 2: Write the Calculator
 
 ```text
-Nines -> availability -> serial or parallel formula -> downtime
+Nines -> availability -> serial or parallel -> downtime
 ```
 
-**Explanation:** The calculator converts inputs, combines parts, and prints results.
+**Explanation:** Convert each input, combine the parts, then calculate downtime.
 
-Paste this complete code into `availability.js`. It uses JavaScript and Node.js’s built-in file system module:
+Paste this complete code into `availability.js`:
 
 ```javascript
 const fs = require("node:fs");
@@ -261,15 +232,19 @@ try {
 }
 ```
 
-**What this file does:** Converts nines to availability, combines components using simple loops, and prints availability and expected downtime. Use `--demo` for built-in examples or `--csv` for your own design.
+**What this file does:** Calculates availability and downtime from built-in examples, CSV groups, or direct nines inputs.
 
 ---
 
 ## Step 3: Write the System CSV
 
-For the CSV design below, `SYSTEM` has **99.889910%** availability and **578.63 minutes** of yearly downtime. The demo produces the same values under its combined-design heading.
+```text
+lb group -> api group (two copies) -> db group
+```
 
-Save the original design in `components.csv`:
+**Explanation:** Copies in one group are alternatives; different groups are required.
+
+Save this design in `components.csv`:
 
 ```csv
 component,nines,group
@@ -279,90 +254,65 @@ API-server-2,3,api
 DB-primary,4,db
 ```
 
-**What this file does:** Describes the load balancer, two alternative apps, and database.
+**What this file does:** Defines one load balancer, two alternative apps, and one database.
 
-Rows in the same group are alternatives. Different groups are required. Both `api` rows do the same job, so either can serve the request. The `lb` and `db` groups have separate required jobs. Use `3` for three nines, not `99.9`.
+Use `3` for three nines, not `99.9`. Keep the header exactly as shown and avoid commas or quotation marks inside field values.
 
 ---
 
 ## Step 4: Run the Calculator
 
-Run from `m3-l1` after saving `availability.js`:
+![Four Node.js demo reports comparing availability and downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/demo-output.png)
+
+From `m3-l1`, run the built-in examples:
 
 ```bash
 node availability.js --demo
 ```
 
-**Explanation:** Runs the four built-in availability examples.
+**Explanation:** Prints four designs without reading your CSV.
 
-<p align="center">
-  <a href="./images/demo-output.png">
-    <img src="./images/demo-output.png" alt="Node.js demo output for single, serial, parallel, and combined designs" width="800">
-  </a>
-</p>
+**What to expect:** The combined design has **99.889910%** availability and **578.63 minutes/year** of downtime.
 
-**What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability, equivalent nines, and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
+![CSV report showing 578.63 minutes of yearly downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/csv-system-output.png)
 
-| Design | Availability | Yearly downtime |
-| --- | --- | --- |
-| Single three-nine part | 99.9% | 525.60 minutes |
-| Two required parts | 99.800100% | 1050.67 minutes |
-| Two alternative apps | 99.999900% | 0.53 minutes |
-| Original combined design | 99.889910% | 578.63 minutes |
-
-Calculate the design saved in your CSV file:
+Calculate your saved design:
 
 ```bash
 node availability.js --csv components.csv
 ```
 
-**What to expect:** The `SYSTEM` report shows **99.889910%** availability and **578.63 minutes/year** of downtime.
+**Explanation:** Reads the CSV and prints the system report.
 
-<p align="center">
-  <a href="./images/csv-system-output.png">
-    <img src="./images/csv-system-output.png" alt="Node.js CSV report showing 99.889910 percent availability and 578.63 minutes of yearly downtime" width="800">
-  </a>
-</p>
+**What to expect:** The result matches the demo's combined design.
 
-**CSV format:** Keep the header exactly as shown and use simple values without commas or quotation marks inside fields. The calculator reads this lab’s simple comma-separated format.
+![Direct comparison of two three-nine components in serial and parallel](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial-parallel.png)
 
-### Compare Serial and Parallel Directly
-
-To focus on two three-nine components, run:
+Compare two components directly:
 
 ```bash
 node availability.js --nines 3 3 --topology serial
 node availability.js --nines 3 3 --topology parallel
 ```
 
-The serial design needs both components and has **1050.67 minutes/year** of expected downtime. The parallel design needs only one working copy and has **0.53 minutes/year**. These match the corresponding demo results.
+**Explanation:** Uses the same inputs with two different connection types.
 
-<p align="center">
-  <a href="./images/serial-parallel.png">
-    <img src="./images/serial-parallel.png" alt="Node.js commands comparing serial and parallel designs with two three-nine components" width="800">
-  </a>
-</p>
+**What to expect:** Serial downtime is **1050.67 minutes/year**; parallel downtime is **0.53 minutes/year**.
 
-### Improve the Load Balancer
+![Improved load balancer reduces yearly downtime to 105.64 minutes](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/improved-lb-output.png)
 
-In `components.csv`, change `LB-1,3,lb` to `LB-1,4,lb`, leaving the apps and database unchanged. Save the file and run the CSV calculation again:
+Change `LB-1,3,lb` to `LB-1,4,lb` in `components.csv`, save it, and run again:
 
 ```bash
 node availability.js --csv components.csv
 ```
 
-This run uses your updated CSV; `--demo` always uses its original built-in values.
+**Explanation:** Recalculates the system with a four-nine load balancer.
 
-**What to expect:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Improving a real service needs engineering work.
-
-<p align="center">
-  <a href="./images/improved-lb-output.png">
-    <img src="./images/improved-lb-output.png" alt="Updated CSV report showing 99.979901 percent availability and 105.64 minutes of yearly downtime" width="800">
-  </a>
-</p>
+**What to expect:** Availability rises to **99.979901%** and downtime falls to **105.64 minutes/year**. The demo keeps its original values.
 
 ---
 
 ## Conclusion
 
-You learned that every required part adds a way for a request to fail, while alternative app copies let the service keep working when one app stops. Calculate each group of alternatives first, then multiply the required parts: backup apps still need a working load balancer and database. Next, use SLOs and error budgets to set a reliability target and decide how many failures are acceptable.
+Backup apps help, but shared dependencies can still stop the service. Next, use SLOs and error budgets to set a reliability target and decide how many failures are acceptable.
