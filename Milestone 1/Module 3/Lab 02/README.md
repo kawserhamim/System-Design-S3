@@ -8,6 +8,27 @@
 
 Set a target for the Orders API. An **API** lets programs request actions. Use Node.js and a text editor.
 
+## Prerequisite: Set Up Node.js
+
+### Install Node.js
+
+Run these installation commands in an Ubuntu/Debian terminal:
+
+```bash
+sudo apt update
+sudo apt install -y nodejs
+```
+
+### Check the Node.js Version
+
+After installation, run:
+
+```bash
+node --version
+```
+
+**What to expect:** A version number starting with `v`. If Node.js is already installed from Lab 1, you can skip installation and run only the version check. This calculator uses built-in JavaScript features and needs no npm packages.
+
 ## Objective
 
 You will:
@@ -100,24 +121,6 @@ touch slo-document.md orders-api-rules.yaml calculate-budget.js
 ```
 
 **Explanation:** Creates and opens the lab folder, then creates the three empty files. These commands normally print nothing. Add their contents in the steps below.
-
-Install Node.js in an Ubuntu/Debian terminal:
-
-```bash
-sudo apt update
-sudo apt install -y nodejs
-```
-
-**Explanation:** Installs Node.js. If Node.js is already installed from Lab 1, skip this installation.
-
-Check the installed version:
-
-```bash
-node --version
-```
-
-**What to expect:** A version number starting with `v`. This calculator uses built-in JavaScript features and needs no npm packages.
-
 
 Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day. The budget does not reset at the start of a calendar month. Paste into `calculate-budget.js`:
 
