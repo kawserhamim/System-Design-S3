@@ -99,6 +99,12 @@ node --version
 
 **What to expect:** Installation prints progress or says Node.js is already installed. `node --version` prints a version starting with `v`.
 
+<p align="center">
+  <a href="./images/node-install.png">
+    <img src="./images/node-install.png" alt="Terminal showing node --version and Node.js v22.16.0" width="800">
+  </a>
+</p>
+
 Create the folder and empty files:
 
 ```bash
@@ -111,7 +117,19 @@ ls
 
 **What to expect:** The first two commands normally print nothing. `ls` lists `availability.js` and `components.csv`; open this folder in your editor.
 
+<p align="center">
+  <a href="./images/file-command.png">
+    <img src="./images/file-command.png" alt="Terminal creating m3-l1 and listing availability.js and components.csv" width="800">
+  </a>
+</p>
+
 **In your editor:** Open `m3-l1`. The Explorer should show `availability.js` and `components.csv`. Both files are empty until you add their contents in the next steps.
+
+<p align="center">
+  <a href="./images/create-file.png">
+    <img src="./images/create-file.png" alt="Editor Explorer showing availability.js and components.csv in m3-l1" width="350">
+  </a>
+</p>
 
 ---
 
@@ -156,8 +174,13 @@ function parallel(values) {
 
 function report(label, availability) {
   const downtime = 1 - availability;
+  let nines = "beyond precision";
+  if (downtime > 0) {
+    nines = (-Math.log10(downtime)).toFixed(3);
+  }
   console.log(label);
   console.log("  availability:", (availability * 100).toFixed(6) + "%");
+  console.log("  nines:", nines);
   console.log("  downtime:", (downtime * 43200).toFixed(2), "min/month");
   console.log("           ", (downtime * 525600).toFixed(2), "min/year");
   console.log();
@@ -214,8 +237,23 @@ try {
     demo();
   } else if (command === "--csv" && csvPath && process.argv.length === 4) {
     report("SYSTEM", readSystem(csvPath));
+  } else if (command === "--nines") {
+    // Example: --nines 3 3 --topology parallel
+    const args = process.argv.slice(3);
+    const topology = args.pop();
+    const flag = args.pop();
+    if (flag !== "--topology" || args.length === 0 ||
+        (topology !== "serial" && topology !== "parallel")) {
+      throw new Error("Use --nines 3 3 --topology serial or parallel");
+    }
+    const values = [];
+    for (const input of args) {
+      values.push(probability(Number(input)));
+    }
+    if (topology === "serial") report("serial", serial(values));
+    else report("parallel", parallel(values));
   } else {
-    throw new Error("Use --demo or --csv components.csv");
+    throw new Error("Use --demo, --csv components.csv, or --nines 3 3 --topology serial");
   }
 } catch (error) {
   console.error("Error:", error.message);
@@ -257,7 +295,13 @@ node availability.js --demo
 
 **Explanation:** Runs the four built-in availability examples.
 
-**What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
+<p align="center">
+  <a href="./images/demo-output.png">
+    <img src="./images/demo-output.png" alt="Node.js demo output for single, serial, parallel, and combined designs" width="800">
+  </a>
+</p>
+
+**What to expect:** Four reports show single, serial, parallel, and combined designs. Each prints availability, equivalent nines, and downtime in minutes. The demo uses built-in values; it does not read `components.csv`.
 
 | Design | Availability | Yearly downtime |
 | --- | --- | --- |
@@ -274,7 +318,30 @@ node availability.js --csv components.csv
 
 **What to expect:** The `SYSTEM` report shows **99.889910%** availability and **578.63 minutes/year** of downtime.
 
+<p align="center">
+  <a href="./images/csv-system-output.png">
+    <img src="./images/csv-system-output.png" alt="Node.js CSV report showing 99.889910 percent availability and 578.63 minutes of yearly downtime" width="800">
+  </a>
+</p>
+
 **CSV format:** Keep the header exactly as shown and use simple values without commas or quotation marks inside fields. The calculator reads this lab’s simple comma-separated format.
+
+### Compare Serial and Parallel Directly
+
+To focus on two three-nine components, run:
+
+```bash
+node availability.js --nines 3 3 --topology serial
+node availability.js --nines 3 3 --topology parallel
+```
+
+The serial design needs both components and has **1050.67 minutes/year** of expected downtime. The parallel design needs only one working copy and has **0.53 minutes/year**. These match the corresponding demo results.
+
+<p align="center">
+  <a href="./images/serial-parallel.png">
+    <img src="./images/serial-parallel.png" alt="Node.js commands comparing serial and parallel designs with two three-nine components" width="800">
+  </a>
+</p>
 
 ### Improve the Load Balancer
 
@@ -287,6 +354,12 @@ node availability.js --csv components.csv
 This run uses your updated CSV; `--demo` always uses its original built-in values.
 
 **What to expect:** Availability becomes **99.979901%**, with **105.64 minutes** of yearly downtime. That is about **1.76 hours**, down from **9.64 hours**. Improving a real service needs engineering work.
+
+<p align="center">
+  <a href="./images/improved-lb-output.png">
+    <img src="./images/improved-lb-output.png" alt="Updated CSV report showing 99.979901 percent availability and 105.64 minutes of yearly downtime" width="800">
+  </a>
+</p>
 
 ---
 
