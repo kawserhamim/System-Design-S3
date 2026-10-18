@@ -8,27 +8,6 @@
 
 Set a target for the Orders API. An **API** lets programs request actions. Use Node.js and a text editor.
 
-## Prerequisite: Set Up Node.js
-
-### Install Node.js
-
-Run these installation commands in an Ubuntu/Debian terminal:
-
-```bash
-sudo apt update
-sudo apt install -y nodejs
-```
-
-### Check the Node.js Version
-
-After installation, run:
-
-```bash
-node --version
-```
-
-**What to expect:** A version number starting with `v`. If Node.js is already installed from Lab 1, you can skip installation and run only the version check. This calculator uses built-in JavaScript features and needs no npm packages.
-
 ## Objective
 
 You will:
@@ -39,13 +18,17 @@ You will:
 
 ## Deliverable
 
+Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.js`. **YAML** stores settings in text. Record three alert limits, called **thresholds**, but implement only the fast rule.
+
+The diagram outlines the SLO document and alert configuration. You will also create a JavaScript calculator to check the budget values.
+
 <p align="center">
   <a href="./images/what-you-create.png">
-    <img src="./images/what-you-create.png" alt="SLO document and YAML alert rule" width="700">
+    <img src="./images/what-you-create.png" alt="Overview of the SLO document and alert configuration" width="700">
   </a>
 </p>
 
-Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.js`. **YAML** stores settings in text. Record three alert limits, called **thresholds**, but implement only the fast rule.
+Use `orders-api-rules.yaml` throughout this lab; the diagram labels it `.yml`, which is another YAML extension. The diagram mentions both 14.4x and 6x thresholds; here, the YAML implements only the 14.4x fast alert, while the document records all three thresholds.
 
 ## Understand SLI and SLO
 
@@ -80,6 +63,33 @@ A **window** is the time period we look back over. The long window checks lastin
 | 1x (slow) | 3 days + 6 hours | Above 0.10% | Create task |
 
 At steady traffic and errors, 14.4x uses a full 30-day allowance in `30 / 14.4`, about **2.08 days**. This budget counts requests.
+
+## Prerequisite: Set Up Node.js
+
+### Install Node.js
+
+Run these installation commands in an Ubuntu/Debian terminal:
+
+```bash
+sudo apt update
+sudo apt install -y nodejs
+```
+
+### Check the Node.js Version
+
+After installation, run:
+
+```bash
+node --version
+```
+
+<p align="center">
+  <a href="./images/node-version.png">
+    <img src="./images/node-version.png" alt="Terminal showing node --version and Node.js v22.16.0" width="800">
+  </a>
+</p>
+
+**What to expect:** A version number starting with `v`; the screenshot shows `v22.16.0`, and yours may differ. If Node.js is already installed from Lab 1, you can skip installation and run only the version check. This calculator uses built-in JavaScript features and needs no npm packages.
 
 ## Step 1: Define the Request Rules
 
@@ -118,9 +128,24 @@ Create the practice folder:
 ```bash
 mkdir -p m3-l2 && cd m3-l2
 touch slo-document.md orders-api-rules.yaml calculate-budget.js
+ls
 ```
 
-**Explanation:** Creates and opens the lab folder, then creates the three empty files. These commands normally print nothing. Add their contents in the steps below.
+**Explanation:** Creates and opens the lab folder, then creates the three empty files. `ls` lists their names, as shown below.
+
+<p align="center">
+  <a href="./images/file-create.png">
+    <img src="./images/file-create.png" alt="Terminal creating m3-l2 and listing the three lab files" width="800">
+  </a>
+</p>
+
+**In your editor:** Open `m3-l2`. Check that the Explorer contains `calculate-budget.js`, `orders-api-rules.yaml`, and `slo-document.md`. Add their contents in the following steps.
+
+<p align="center">
+  <a href="./images/folder-structure.png">
+    <img src="./images/folder-structure.png" alt="Editor Explorer showing all three files in m3-l2" width="400">
+  </a>
+</p>
 
 Use **10,000,000** counted requests and **4,000** errors. A **rolling window** uses the latest 30 days. Each new day replaces the oldest day. The budget does not reset at the start of a calendar month. Paste into `calculate-budget.js`:
 
@@ -211,6 +236,8 @@ A **retry** is another attempt. Count each separately. A **gateway** receives re
 
 ## Step 4: Write the Alert Rule
 
+The diagram shows the condition you will encode: errors must exceed 1.44% in both the last hour and the last five minutes, continuously for two minutes.
+
 <p align="center">
   <a href="./images/fast-alert.png">
     <img src="./images/fast-alert.png" alt="Both windows exceed 1.44% for two minutes before the alert fires" width="700">
@@ -251,7 +278,7 @@ groups:
 
 ---
 
-## 5. Run the following commands in the terminal
+## Step 5: Run the Calculator and Validate the Rule
 
 From `m3-l2`, run the saved calculator:
 
@@ -267,13 +294,11 @@ node calculate-budget.js
   </a>
 </p>
 
-**Screenshot note:** The image above shows an earlier command. Run `node calculate-budget.js` for this version; the calculated values are the same.
-
 **What to expect:** **10,000** failures are allowed; **6,000** remain and **40%** is used. The **99.96%** SLI exceeds the target, so `SLO met` is `Yes`.
 
 ### Download the Rule Tool
 
-Use `promtool`, the Prometheus rule-file tool. These commands need `curl` and `tar` on Linux with a 64-bit Intel or AMD processor:
+After checking the budget, validate the YAML alert rule using `promtool`, the Prometheus rule-file tool. Stay in `m3-l2` for the download, extraction, and validation commands. These commands need `curl` and `tar` on Linux with a 64-bit Intel or AMD processor:
 
 ```bash
 # paste this as one line
@@ -322,7 +347,7 @@ ls prometheus-3.5.0.linux-amd64
   </a>
 </p>
 
-**What to expect:** `SUCCESS: 1 rules found` means the rule was accepted. Stay in `m3-l2`; this does not send alerts.
+**What to expect:** `SUCCESS: 1 rules found` means the rule was accepted. The screenshot uses a different practice directory; use your `m3-l2` folder rather than copying its `cd` path. This check validates the rule file and does not send alerts.
 
 ---
 
