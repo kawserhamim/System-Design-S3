@@ -1,6 +1,6 @@
 # Availability Math
 
-![Choose a design, calculate availability, and compare downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability.png)
+![Choose a design, calculate availability, and compare downtime](./images/availability.png)
 
 Availability measures how much of the time a service is working for its users. Build a Node.js calculator to compare a URL shortener's load balancer, apps, and database without deploying servers. You will turn availability into expected downtime and learn which design changes help keep the service working.
 
@@ -37,19 +37,19 @@ Expected yearly downtime is `(1 - availability) * 525600`. It estimates a total,
 
 ## Serial: Every Part Must Work
 
-![A failed app prevents requests from reaching the database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial.png)
+![A failed app prevents requests from reaching the database](./images/serial.png)
 
 The request needs the load balancer, app, and database. For independent failures, multiply their availabilities: `0.999 * 0.999 = 0.998001`, or **99.8001%**. Independent means one failure does not change another part's failure chance. More required parts add more ways to fail.
 
 ## Parallel: One Copy Is Enough
 
-![One app serves requests while the other app is down](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/parallel.png)
+![One app serves requests while the other app is down](./images/parallel.png)
 
 A replica is another copy doing the same job. Two independent three-nine apps fail together with probability `0.001 * 0.001`. Their group availability is `1 - 0.001 * 0.001 = 0.999999`, or **99.9999%**. The surviving copy must handle the traffic alone.
 
 ## Compare the Designs
 
-![Yearly downtime for single, serial, and parallel designs](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/availability-calculation-result.png)
+![Yearly downtime for single, serial, and parallel designs](./images/availability-calculation-result.png)
 
 Every part below has 99.9% availability. The connections change the result.
 
@@ -61,7 +61,7 @@ Every part below has 99.9% availability. The connections change the result.
 
 ## Combined: Calculate the Group First
 
-![Required load balancer, two alternative apps, and required database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/combine.png)
+![Required load balancer, two alternative apps, and required database](./images/combine.png)
 
 Read this as `LB -> (App 1 || App 2) -> DB`; `||` means alternatives. Calculate the app group first, then multiply the required tiers, or groups doing one role. With three-nine load balancer and apps, and a four-nine database, `0.999 * 0.999999 * 0.9999` gives **99.889910%**.
 
@@ -69,7 +69,7 @@ The load balancer and database are shared dependencies: either can stop both app
 
 ## Step 1: Create the Project
 
-![Node.js version check showing v22.16.0](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/node-install.png)
+![Node.js version check showing v22.16.0](./images/node-install.png)
 
 Install Node.js in an Ubuntu/Debian terminal. Skip installation if it is already available.
 
@@ -86,7 +86,7 @@ node --version
 
 **Explanation:** Prints your Node.js version, which may differ from the screenshot.
 
-![Terminal creating m3-l1 and listing the calculator and CSV files](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/file-command.png)
+![Terminal creating m3-l1 and listing the calculator and CSV files](./images/file-command.png)
 
 Create the project files:
 
@@ -98,7 +98,7 @@ ls
 
 **Explanation:** Creates the folder and two empty files, then lists their names.
 
-![Editor showing availability.js and components.csv in m3-l1](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/create-file.png)
+![Editor showing availability.js and components.csv in m3-l1](./images/create-file.png)
 
 Open `m3-l1` in your editor. Both files should appear as shown; no npm packages are needed.
 
@@ -262,7 +262,7 @@ Use `3` for three nines, not `99.9`. Keep the header exactly as shown and avoid 
 
 ## Step 4: Run the Calculator
 
-![Four Node.js demo reports comparing availability and downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/demo-output.png)
+![Four Node.js demo reports comparing availability and downtime](./images/demo-output.png)
 
 From `m3-l1`, run the built-in examples:
 
@@ -274,7 +274,7 @@ node availability.js --demo
 
 **What to expect:** The combined design has **99.889910%** availability and **578.63 minutes/year** of downtime.
 
-![CSV report showing 578.63 minutes of yearly downtime](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/csv-system-output.png)
+![CSV report showing 578.63 minutes of yearly downtime](./images/csv-system-output.png)
 
 Calculate your saved design:
 
@@ -286,7 +286,7 @@ node availability.js --csv components.csv
 
 **What to expect:** The result matches the demo's combined design.
 
-![Direct comparison of two three-nine components in serial and parallel](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/serial-parallel.png)
+![Direct comparison of two three-nine components in serial and parallel](./images/serial-parallel.png)
 
 Compare two components directly:
 
@@ -299,7 +299,7 @@ node availability.js --nines 3 3 --topology parallel
 
 **What to expect:** Serial downtime is **1050.67 minutes/year**; parallel downtime is **0.53 minutes/year**.
 
-![Improved load balancer reduces yearly downtime to 105.64 minutes](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2001/images/improved-lb-output.png)
+![Improved load balancer reduces yearly downtime to 105.64 minutes](./images/improved-lb-output.png)
 
 Change `LB-1,3,lb` to `LB-1,4,lb` in `components.csv`, save it, and run again:
 

@@ -1,6 +1,6 @@
 # SLO & Error Budget Definition
 
-![Set a reliability target, calculate its error budget, and alert on fast burn](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/budget.png)
+![Set a reliability target, calculate its error budget, and alert on fast burn](./images/budget.png)
 
 Set a reliability target for an Orders API, a service that lets programs work with orders. Use a JavaScript calculator to find how many failures the target allows, then write an alert for failures that consume the allowance too quickly. You will validate the alert file without deploying the API or sending notifications.
 
@@ -14,7 +14,7 @@ By the end of this lab, you can:
 
 ## Deliverable
 
-![Overview of the SLO document and YAML alert configuration](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/what-you-create.png)
+![Overview of the SLO document and YAML alert configuration](./images/what-you-create.png)
 
 Create `slo-document.md`, `orders-api-rules.yaml`, and `calculate-budget.js`. YAML stores settings in text. Use `.yaml`; the diagram uses the equivalent `.yml` extension.
 
@@ -22,7 +22,7 @@ Record all three alert thresholds, or limits, in the document. Implement only th
 
 ## Understand SLI and SLO
 
-![Skip cancellations and health checks before counting good and bad requests](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/which-requests-orginal.png)
+![Skip cancellations and health checks before counting good and bad requests](./images/which-requests-orginal.png)
 
 A service level indicator (SLI) measures reliability. A service level objective (SLO) sets its target: **99.9%** of counted requests without server errors over 30 days. Skip excluded requests, then count good and bad responses.
 
@@ -30,7 +30,7 @@ HTTP status codes describe responses. Count `2xx`, `3xx`, and `4xx` as good, exc
 
 ## Understand Error Budgets and Burn Rate
 
-![Fast, medium, and slow burn thresholds with two time windows](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/burn-rate-alerting.png)
+![Fast, medium, and slow burn thresholds with two time windows](./images/burn-rate-alerting.png)
 
 The error budget is the number of failures the target allows. A 99.9% target allows **0.1%** failures. Burn rate compares the observed error percentage with that allowance: `1.44% / 0.1% = 14.4x`.
 
@@ -69,7 +69,7 @@ For 999 good and one bad request, the SLI is **99.9%**.
 
 ## Step 2: Write the Budget Calculator
 
-![Node.js version check showing v22.16.0](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/node-version.png)
+![Node.js version check showing v22.16.0](./images/node-version.png)
 
 Install Node.js in an Ubuntu/Debian terminal, or skip installation if you completed Lab 1:
 
@@ -86,7 +86,7 @@ node --version
 
 **Explanation:** Prints the installed version, which may differ from the screenshot.
 
-![Terminal creating m3-l2 and listing all three lab files](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/file-create.png)
+![Terminal creating m3-l2 and listing all three lab files](./images/file-create.png)
 
 Create the practice folder and files:
 
@@ -98,7 +98,7 @@ ls
 
 **Explanation:** Creates three empty files and lists their names.
 
-![Editor Explorer showing the calculator, alert rule, and SLO document](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/folder-structure.png)
+![Editor Explorer showing the calculator, alert rule, and SLO document](./images/folder-structure.png)
 
 Open `m3-l2` in your editor. Use 10,000,000 counted requests and 4,000 errors from a rolling 30-day window, meaning the latest 30 days rather than a calendar month. Paste this into `calculate-budget.js`; no npm packages are needed.
 
@@ -189,7 +189,7 @@ A gateway receives requests before the service. A retry is another attempt; coun
 
 ## Step 4: Write the Alert Rule
 
-![Both error windows must exceed 1.44 percent for two minutes](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/fast-alert.png)
+![Both error windows must exceed 1.44 percent for two minutes](./images/fast-alert.png)
 
 Prometheus collects measurements; PromQL calculates values from them. A counter increases as requests arrive. Save this rule as `orders-api-rules.yaml`:
 
@@ -227,7 +227,7 @@ Labels identify the service (`job`), response code (`code`), and path (`route`).
 
 ## Step 5: Run the Calculator and Validate the Rule
 
-![Node.js calculator output showing 40 percent budget used and SLO met](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/budget-output.png)
+![Node.js calculator output showing 40 percent budget used and SLO met](./images/budget-output.png)
 
 From `m3-l2`, run the calculator:
 
@@ -241,7 +241,7 @@ node calculate-budget.js
 
 ### Download the Rule Tool
 
-![Prometheus archive download in progress at 11 percent](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/download-output.png)
+![Prometheus archive download in progress at 11 percent](./images/download-output.png)
 
 Stay in `m3-l2`. These commands use `curl` and `tar` on Linux with a 64-bit Intel or AMD processor.
 
@@ -256,7 +256,7 @@ curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prom
 
 ### Extract the Tool
 
-![Extraction command and promtool filename](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/extract-output.png)
+![Extraction command and promtool filename](./images/extract-output.png)
 
 Extract only the validation tool:
 
@@ -272,7 +272,7 @@ ls prometheus-3.5.0.linux-amd64
 
 ### Validate the Rule
 
-![Promtool reports SUCCESS: 1 rules found](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2002/images/run-output.png)
+![Promtool reports SUCCESS: 1 rules found](./images/run-output.png)
 
 Use `m3-l2`, not the screenshot directory:
 
