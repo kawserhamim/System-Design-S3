@@ -2,7 +2,7 @@
 
 ![Choose a design, calculate availability, and compare downtime](./images/availability.png)
 
-Availability measures how much of the time a service is working for its users. Build a Node.js calculator to compare a URL shortener's load balancer, apps, and database without deploying servers. You will turn availability into expected downtime and learn which design changes help keep the service working.
+Why can a service still go down even when it has backup servers? In this lab, you will build a simple Node.js calculator to learn how each part of a service affects its availability, or how much of the time it works for users. Using a URL shortener as an example, you will compare designs and calculate their expected downtime without setting up real servers. This will help you understand where backups help and which parts to improve to keep the whole service working.
 
 ## Objective
 
