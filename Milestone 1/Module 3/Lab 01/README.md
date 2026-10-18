@@ -6,23 +6,7 @@
   </a>
 </p>
 
-## Introduction
-
-Imagine clicking a short link and getting an error because the service is down. Even if the outage lasts only a few minutes, people cannot reach the page they need. **Availability** describes how much of the time a service is working. In system design, we use it to estimate how often users can successfully use a service and how much downtime a design might have.
-
-A service usually depends on several parts working together. Adding another app server can help when one app fails, but users may still lose access if both apps depend on the same failed database or load balancer. To understand whether a design improves availability, we need to look at both the parts and how they connect.
-
-## About This Lab
-
-In this lab, you will build a Python availability calculator for a **URL shortener**, a service that turns long links into short ones. A load balancer sends requests to app servers, and a database stores the links. You will describe these components in a CSV file and use the calculator to compare three arrangements: required parts in a chain, alternative copies of a part, and a combination of both.
-
-You will convert availability into expected monthly and yearly downtime, then compare the original design with one that has a more available load balancer. This is a calculation exercise: you will model designs without deploying real servers or causing outages.
-
-## Why This Lab Matters
-
-Before spending time or money on extra servers, engineers need to understand which changes will help the whole service. This lab shows why a backup app does not solve every outage and why improving a shared dependency can make a large difference. By connecting availability percentages to minutes of downtime, you will learn to compare designs in terms of their effect on users.
-
-The calculations assume independent failures and that one surviving replica can handle the traffic. They provide estimates for comparing designs; they do not predict exactly when an outage will happen.
+Availability measures how much of the time a service is working and accessible to users. In this lab, you will build a Python calculator to explore how a URL shortener’s load balancer, app servers, and database affect its overall availability. You will compare designs with required components and backup copies, then translate the results into expected monthly and yearly downtime. Through these comparisons, you will learn which design changes help keep a service available and why adding more servers alone may not solve the problem—all without deploying real servers.
 
 ## Objective
 
