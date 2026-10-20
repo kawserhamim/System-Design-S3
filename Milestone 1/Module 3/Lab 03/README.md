@@ -283,7 +283,15 @@ node --version
 npm --version
 ```
 
-Run the following commands one at a time from `reliability-lab`.
+<p align="center">
+  <a href="images/node-version.png">
+    <img src="images/node-version.png" alt="Terminal displaying the installed Node.js and npm versions" width="1000">
+  </a>
+</p>
+
+**Version check:** Both commands print a version number. Your versions may differ.
+
+Run the following commands one at a time from `reliability-lab`. Some setup screenshots show `~/code` in the prompt; use your own `reliability-lab` folder for these commands.
 
 ```bash
 npm init -y
@@ -291,11 +299,27 @@ npm init -y
 
 **Explanation:** Creates `package.json` to track the lab's Node.js project and packages.
 
+<p align="center">
+  <a href="images/init.png">
+    <img src="images/init.png" alt="Terminal running npm init -y and creating package.json" width="1000">
+  </a>
+</p>
+
+**Project setup:** npm creates `package.json`. The generated project name depends on your folder name.
+
 ```bash
 npm install yaml@2
 ```
 
 **Explanation:** Installs the [yaml package](https://eemeli.org/yaml/) that reads YAML files. npm creates `node_modules/` and `package-lock.json`. Dependencies stay in this lab folder; no environment activation is needed.
+
+<p align="center">
+  <a href="images/yaml.png">
+    <img src="images/yaml.png" alt="Terminal successfully installing yaml version 2 with npm" width="1000">
+  </a>
+</p>
+
+**Package installation:** npm reports that the YAML package was added.
 
 **Check the installation:** Confirm that Node.js can read YAML:
 
@@ -309,6 +333,14 @@ Expected output:
 YAML is ready
 ```
 
+<p align="center">
+  <a href="images/yaml-ready.png">
+    <img src="images/yaml-ready.png" alt="Terminal loading the yaml package with Node.js and printing YAML is ready" width="1000">
+  </a>
+</p>
+
+**Import check:** `YAML is ready` confirms that Node.js can load the YAML package.
+
 If installation fails, read the error message first. If npm cannot reach the package registry, check your network access and retry `npm install yaml@2`. If `node` or `npm` is not found, install Node.js with npm before continuing. Continue only after the import check succeeds.
 
 Now create `analyze_topology.js`, copy the complete code below into it, and save it. You can use the supplied code without writing it from scratch. Your job is to understand its calculation and compare its results with your hand calculations.
@@ -316,6 +348,14 @@ Now create `analyze_topology.js`, copy the complete code below into it, and save
 ```bash
 touch analyze_topology.js
 ```
+
+<p align="center">
+  <a href="images/analyze.png">
+    <img src="images/analyze.png" alt="Terminal creating analyze_topology.js with touch" width="1000">
+  </a>
+</p>
+
+**File creation:** This creates the calculator file. Paste and save the JavaScript below before running it.
 
 **Calculator file:** After creating the file, paste and save the complete JavaScript code below before running it. This code uses CommonJS, the default module format in the project created by `npm init -y`.
 
@@ -467,14 +507,6 @@ The script accepts availability and SLO targets above 0% and up to 100%, a posit
 cp topology.yaml topology-improved.yaml
 ```
 
-<p align="center">
-  <a href="images/improved-topologyy.png">
-    <img src="images/improved-topologyy.png" alt="Terminal creating the empty topology-improved.yaml file with touch" width="1000">
-  </a>
-</p>
-
-**Alternative file creation:** This screenshot uses `touch topology-improved.yaml`. If you use that command instead of `cp`, paste the complete improved YAML below; `touch` does not copy the baseline content.
-
 Open the new file. Under both `orders` and `inventory`, add one more `- availability_percent: 99.9` line. Align each new line with the existing copy's line. Save the file.
 
 Compare your file with the complete example below. Orders and Inventory should each have two copies; Gateway and Database should each have one.
@@ -524,7 +556,6 @@ A_system ≈ 0.9995 x 0.999999 x 0.999999 x 0.9999 ≈ 0.99939805
 **Explanation:** Calculate each pair of copies first, then multiply the four tier values.
 
 Gateway and Database are still single points of failure: if either fails, the whole service stops working. A shared power or network problem can also stop both copies of a tier.
-
 
 ### What to write in calculations.md
 
@@ -633,8 +664,8 @@ touch slo-document.md
 ```
 
 <p align="center">
-  <a href="images/sllo-documents.png">
-    <img src="images/sllo-documents.png" alt="Terminal creating the empty slo-document.md file" width="1000">
+  <a href="images/slo.png">
+    <img src="images/slo.png" alt="Terminal creating the empty slo-document.md file" width="1000">
   </a>
 </p>
 
@@ -697,8 +728,8 @@ touch reliability-report.md
 ```
 
 <p align="center">
-  <a href="images/reliability-report.png">
-    <img src="images/reliability-report.png" alt="Terminal creating the empty reliability-report.md file" width="1000">
+  <a href="images/reliability-labb.png">
+    <img src="images/reliability-labb.png" alt="Terminal creating the empty reliability-report.md file" width="1000">
   </a>
 </p>
 
@@ -783,6 +814,14 @@ reliability-lab/
 
 **Folder check:** All six deliverable files and the local Node.js project files are present. Check that each file also contains its required content.
 
+<p align="center">
+  <a href="images/whole-folder.png">
+    <img src="images/whole-folder.png" alt="Editor showing the six deliverables, package.json, package-lock.json, and node_modules inside reliability-lab" width="400">
+  </a>
+</p>
+
+**Project folder:** Your completed lab should have the same files and dependency folder.
+
 Run the starting design first:
 
 ```bash
@@ -790,6 +829,14 @@ node analyze_topology.js topology.yaml
 ```
 
 **Explanation:** Calculates availability and compares the starting design with both targets.
+
+<p align="center">
+  <a href="images/analyze+topology.png">
+    <img src="images/analyze+topology.png" alt="Node.js baseline output showing 99.740225 percent availability and MODEL FAIL for the 99.9 percent SLO" width="1000">
+  </a>
+</p>
+
+**Baseline output:** The calculator predicts 2,598 failed requests and passes only the 99.5% target.
 
 **What to expect:** The baseline has **99.740225%** availability, **2.585** nines, and **112.22 minutes** of downtime over 30 days. Its **2,598** predicted failures fit within the 99.5% target's 5,000-failure budget, but exceed the 99.9% target's 1,000-failure budget.
 
@@ -800,6 +847,14 @@ node analyze_topology.js topology-improved.yaml
 ```
 
 **Explanation:** Calculates the improved design with two copies of each app tier.
+
+<p align="center">
+  <a href="images/analyze+topology-improved.png">
+    <img src="images/analyze+topology-improved.png" alt="Node.js improved output showing 99.939805 percent availability and MODEL PASS for both SLO targets" width="1000">
+  </a>
+</p>
+
+**Improved output:** The calculator predicts 602 failed requests and passes both targets.
 
 **What to expect:** The improved design has **99.939805%** availability, **3.220** nines, and **26.00 minutes** of downtime. Its **602** predicted failures fit within both budgets, so both targets show `MODEL PASS`.
 
