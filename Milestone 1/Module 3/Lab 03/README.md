@@ -1,18 +1,18 @@
 # Topology Driven Reliability Modeling
 
-Build a model of a small service and calculate how often it should be available. Check your answers with Python. Then write a reliability target and a short report explaining your design.
+Build a model of a small service and calculate how often it should be available. Check your answers with Node.js. Then write a reliability target and a short report explaining your design.
 
 ## Objective
 
 By the end of this lab, you can:
 
 - Describe the parts of a service in `topology.yaml`.
-- Calculate the availability of the whole service by hand, then check it with Python.
+- Calculate the availability of the whole service by hand, then check it with Node.js.
 - Choose a reliability target and explain why your design can meet it.
 
 ## Deliverable
 
-Create six files: `topology.yaml`, `topology-improved.yaml`, `calculations.md`, `analyze_topology.py`, `slo-document.md`, and `reliability-report.md`. Keep the report to one page. Choose a target for either the starting design, called the baseline, or the improved design.
+Create six files: `topology.yaml`, `topology-improved.yaml`, `calculations.md`, `analyze_topology.js`, `slo-document.md`, and `reliability-report.md`. Keep the report to one page. Choose a target for either the starting design, called the baseline, or the improved design.
 
 ## How the parts work together
 
@@ -67,7 +67,7 @@ The availability values in this lab are practice numbers, not measurements from 
 
 ## Before you start: Create a lab folder
 
-You need a terminal, Python 3, and a text editor. The terminal commands in this lab use Bash on Linux or macOS.
+You need a terminal, Node.js with npm, and a text editor. The terminal commands in this lab use Bash on Linux or macOS.
 
 Run these commands once:
 
@@ -86,7 +86,6 @@ Open this folder in your text editor. Create and save all six deliverable files 
 
 **Folder setup:** The terminal is now inside `reliability-lab`, where the remaining commands should run.
 
-
 You are modeling a service, not deploying one. You do not need to start a Gateway, Orders service, Inventory service, or Database.
 
 ## Step 1: Describe the starting design in topology.yaml
@@ -104,13 +103,11 @@ touch topology.yaml
 
 **File creation:** `touch` creates `topology.yaml` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
 
-
 **Your task:** Create a file named `topology.yaml` in your lab folder. Copy the YAML block below into it and save it.
 
 A **tier** is one required part of the service. A **copy** is an instance that can do that tier's job. The starting design has four tiers, with one copy in each tier.
 
 For this exercise, a successful request needs every tier in this path:
-
 
 ```text
 Client  --->  Gateway  --->  Orders  --->  Inventory  --->  Database
@@ -175,7 +172,6 @@ touch calculations.md
 </p>
 
 **File creation:** `touch` creates `calculations.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
-
 
 **Your task:** Create `calculations.md` in the same folder. Record your working and answers there. A `.md` file is a plain text file that can contain headings and tables.
 
@@ -256,115 +252,52 @@ predicted_failed_requests ≈ (112.22 / 43200) x 1,000,000 ≈ 2,598
 
 ---
 
-## Step 4: Write the Python calculator
+## Step 4: Write the Node.js calculator
 
-**Your task:** Set up Python, then create `analyze_topology.py` in your lab folder.
+**Your task:** Set up a Node.js project, then create `analyze_topology.js` in your lab folder.
 
-Run the following commands one at a time in the same terminal. A **virtual environment** keeps the packages for this lab together.
-
-First, create the environment:
+You need Node.js and npm installed. Check that both commands print a version:
 
 ```bash
-python3 -m venv .venv
+node --version
+npm --version
 ```
 
-**Explanation:** Creates a separate place for this lab's Python packages.
-
-
-**What to expect:** This command normally prints nothing on success.
+Run the following commands one at a time from `reliability-lab`.
 
 ```bash
-source .venv/bin/activate
+npm init -y
 ```
 
-**Explanation:** Makes this terminal use the lab's Python environment.
-
-
-<p align="center">
-  <a href="images/venv.png">
-    <img src="images/venv.png" alt="Terminal creating .venv and activating it with the virtual environment prompt visible" width="1000">
-  </a>
-</p>
-
-**Environment setup:** The screenshot shows both commands. The `(.venv)` prompt confirms activation.
-
-**What to expect:** Activation normally prints nothing. Your terminal may add `(.venv)` to its prompt.
+**Explanation:** Creates `package.json` to track the lab's Node.js project and packages.
 
 ```bash
-python3 -m pip install pyyaml
+npm install yaml@2
 ```
 
-**Explanation:** Installs the package that reads YAML files.
+**Explanation:** Installs the [yaml package](https://eemeli.org/yaml/) that reads YAML files. npm creates `node_modules/` and `package-lock.json`. Dependencies stay in this lab folder; no environment activation is needed.
 
-
-<p align="center">
-  <a href="images/pip.png">
-    <img src="images/pip.png" alt="Terminal successfully installing PyYAML in the virtual environment" width="1000">
-  </a>
-</p>
-
-**Package installation:** The screenshot reports `Successfully installed pyyaml`.
-
-**Check the installation:** A successful install reports `Successfully installed` or `Requirement already satisfied`. Confirm that Python can read YAML:
+**Check the installation:** Confirm that Node.js can read YAML:
 
 ```bash
-python3 -c "import yaml; print('PyYAML is ready')"
+node -e "require('yaml'); console.log('YAML is ready')"
 ```
 
 Expected output:
 
 ```text
-PyYAML is ready
+YAML is ready
 ```
 
-<p align="center">
-  <a href="images/payami.png">
-    <img src="images/payami.png" alt="Terminal importing yaml and printing PyYAML is ready" width="1000">
-  </a>
-</p>
+If installation fails, read the error message first. If npm cannot reach the package registry, check your network access and retry `npm install yaml@2`. If `node` or `npm` is not found, install Node.js with npm before continuing. Continue only after the import check succeeds.
 
-**Import check:** This confirms the active Python environment can import PyYAML.
-
-
-If installation fails, check the troubleshooting note below before continuing. Continue only after the import check succeeds.
-
-<details>
-<summary>Troubleshooting: PyYAML installation failed</summary>
-
-Read the error message first. If pip cannot reach the package server, check your network access and try the installation again.
-
-If PyYAML is already installed in your system Python, you can use that existing package. Check it first:
+Now create `analyze_topology.js`, copy the complete code below into it, and save it. You can use the supplied code without writing it from scratch. Your job is to understand its calculation and compare its results with your hand calculations.
 
 ```bash
-deactivate
-python3 -c "import yaml; print('System PyYAML is available')"
+touch analyze_topology.js
 ```
 
-Only if that check succeeds, run:
-
-```bash
-python3 -m venv --system-site-packages .venv
-source .venv/bin/activate
-python3 -c "import yaml; print('PyYAML is ready')"
-```
-
-If the system check reports `ModuleNotFoundError`, this fallback cannot help. Install PyYAML successfully before running the calculator.
-
-</details>
-
-Now create `analyze_topology.py`, copy the complete code below into it, and save it. You can use the supplied code without writing it from scratch. Your job is to understand its calculation and compare its results with your hand calculations.
-```bash
-touch analyze_topology.py
-```
-
-<p align="center">
-  <a href="images/analyze.png">
-    <img src="images/analyze.png" alt="Terminal creating the empty analyze_topology.py file" width="1000">
-  </a>
-</p>
-
-**Calculator file:** After creating the file, paste and save the complete Python code below before running it.
-
+**Calculator file:** After creating the file, paste and save the complete JavaScript code below before running it. This code uses CommonJS, the default module format in the project created by `npm init -y`.
 
 The calculator follows this order:
 
@@ -378,130 +311,131 @@ The calculator follows this order:
 topology.yaml -> load -> parallel availability per tier -> multiply tiers -> nines, downtime, SLO check
 ```
 
-```python
-import sys
-import math
-import yaml
+```javascript
+const fs = require('node:fs');
+const YAML = require('yaml');
 
+function required(mapping, key, location) {
+  if (mapping === null || typeof mapping !== 'object' || Array.isArray(mapping)) {
+    throw new Error(`${location} must be a YAML mapping`);
+  }
+  if (!Object.prototype.hasOwnProperty.call(mapping, key)) {
+    throw new Error(`${location}: missing required key '${key}'`);
+  }
+  return mapping[key];
+}
 
-def required(mapping, key, location):
-    if not isinstance(mapping, dict):
-        raise ValueError(f"{location} must be a YAML mapping")
-    if key not in mapping:
-        raise ValueError(f"{location}: missing required key '{key}'")
-    return mapping[key]
+function number(value, location, upper = Infinity) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > upper) {
+    const bounds = Number.isFinite(upper) ? `above 0 and at most ${upper}` : 'above 0';
+    throw new Error(`${location} must be a finite number ${bounds}, got ${String(value)}`);
+  }
+  return value;
+}
 
+function nonemptyList(value, location) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${location} must be a non-empty list`);
+  }
+  return value;
+}
 
-def number(value, location, upper=None):
-    if (isinstance(value, bool) or not isinstance(value, (int, float))
-            or not math.isfinite(value) or value <= 0
-            or (upper is not None and value > upper)):
-        bounds = f"above 0 and at most {upper}" if upper is not None else "above 0"
-        raise ValueError(f"{location} must be a finite number {bounds}, got {value!r}")
-    return value
+function parallelAvailability(copies) {
+  nonemptyList(copies, 'copies');
+  let unavailability = 1;
+  for (const copy of copies) {
+    const percent = number(required(copy, 'availability_percent', 'copy'),
+      'availability_percent', 100);
+    unavailability *= 1 - percent / 100;
+  }
+  return 1 - unavailability;
+}
 
+function serialAvailability(tierAvailabilities) {
+  return tierAvailabilities.reduce((total, availability) => total * availability, 1);
+}
 
-def nonempty_list(value, location):
-    if not isinstance(value, list) or not value:
-        raise ValueError(f"{location} must be a non-empty list")
-    return value
+function loadTopology(path) {
+  const data = YAML.parse(fs.readFileSync(path, 'utf8'));
+  for (const key of ['service', 'window_days', 'monthly_valid_requests',
+    'slo_targets_percent', 'tiers']) {
+    required(data, key, 'topology');
+  }
+  if (typeof data.service !== 'string' || !data.service.trim()) {
+    throw new Error('service must be a non-empty string');
+  }
+  number(data.window_days, 'window_days');
+  const requests = number(data.monthly_valid_requests, 'monthly_valid_requests');
+  if (!Number.isSafeInteger(requests)) {
+    throw new Error('monthly_valid_requests must be a positive safe integer');
+  }
+  for (const slo of nonemptyList(data.slo_targets_percent, 'slo_targets_percent')) {
+    number(slo, 'slo_targets_percent entry', 100);
+  }
+  nonemptyList(data.tiers, 'tiers').forEach((tier, index) => {
+    const location = `tiers[${index}]`;
+    const name = required(tier, 'name', location);
+    if (typeof name !== 'string' || !name.trim()) {
+      throw new Error(`${location}.name must be a non-empty string`);
+    }
+    const copies = nonemptyList(required(tier, 'copies', location), `${location}.copies`);
+    copies.forEach((copy, copyIndex) => {
+      const copyLocation = `${location}.copies[${copyIndex}]`;
+      number(required(copy, 'availability_percent', copyLocation),
+        `${copyLocation}.availability_percent`, 100);
+    });
+  });
+  return data;
+}
 
+function main() {
+  const path = process.argv[2] || 'topology.yaml';
+  const data = loadTopology(path);
+  const tierAvailabilities = data.tiers.map(tier => parallelAvailability(tier.copies));
+  const aSystem = serialAvailability(tierAvailabilities);
+  const minutesInWindow = data.window_days * 24 * 60;
 
-def parallel_availability(copies):
-    nonempty_list(copies, "copies")
-    unavailability = 1.0
-    for copy in copies:
-        percent = number(required(copy, "availability_percent", "copy"),
-                         "availability_percent", upper=100)
-        a = percent / 100
-        unavailability *= (1 - a)
-    return 1 - unavailability
+  console.log(`Loaded topology: ${data.service}`);
+  console.log(`Tiers in series: ${data.tiers.map(tier => tier.name).join(', ')}`);
+  console.log(`System availability   : ${(aSystem * 100).toFixed(6)}%`);
 
+  let downtime;
+  if (aSystem >= 1) {
+    // log10(0) is undefined, so 100% modeled availability is a special case.
+    console.log('Equivalent nines      : infinite (100% modeled availability)');
+    downtime = 0;
+  } else {
+    const nines = -Math.log10(1 - aSystem);
+    downtime = (1 - aSystem) * minutesInWindow;
+    console.log(`Equivalent nines      : ${nines.toFixed(3)}`);
+  }
+  console.log(`Monthly downtime      : ${downtime.toFixed(2)} minutes`);
+  console.log();
 
-def serial_availability(tier_availabilities):
-    total = 1.0
-    for a in tier_availabilities:
-        total *= a
-    return total
+  const validRequests = data.monthly_valid_requests;
+  const predictedFailed = (downtime / minutesInWindow) * validRequests;
+  for (const slo of data.slo_targets_percent) {
+    const budget = validRequests * (100 - slo) / 100;
+    const verdict = predictedFailed <= budget ? 'MODEL PASS' : 'MODEL FAIL';
+    console.log(`SLO ${slo}%  budget ${budget.toFixed(0)} failed requests   -> ${verdict}`);
+  }
+  console.log(`Predicted failed requests this month: ${predictedFailed.toFixed(0)}`);
+  console.log('MODEL PASS means the model meets this SLO. It is not a measurement of real traffic.');
+}
 
-
-def load_topology(path):
-    with open(path) as f:
-        data = yaml.safe_load(f)
-    for key in ("service", "window_days", "monthly_valid_requests",
-                "slo_targets_percent", "tiers"):
-        required(data, key, "topology")
-    if not isinstance(data["service"], str) or not data["service"].strip():
-        raise ValueError("service must be a non-empty string")
-    number(data["window_days"], "window_days")
-    requests = number(data["monthly_valid_requests"], "monthly_valid_requests")
-    if not isinstance(requests, int):
-        raise ValueError("monthly_valid_requests must be a positive integer")
-    for slo in nonempty_list(data["slo_targets_percent"], "slo_targets_percent"):
-        number(slo, "slo_targets_percent entry", upper=100)
-    for index, tier in enumerate(nonempty_list(data["tiers"], "tiers")):
-        location = f"tiers[{index}]"
-        name = required(tier, "name", location)
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError(f"{location}.name must be a non-empty string")
-        copies = nonempty_list(required(tier, "copies", location), f"{location}.copies")
-        for copy_index, copy in enumerate(copies):
-            copy_location = f"{location}.copies[{copy_index}]"
-            number(required(copy, "availability_percent", copy_location),
-                   f"{copy_location}.availability_percent", upper=100)
-    return data
-
-
-def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else "topology.yaml"
-    data = load_topology(path)
-
-    tier_availabilities = [parallel_availability(t["copies"]) for t in data["tiers"]]
-    a_system = serial_availability(tier_availabilities)
-
-    minutes_in_window = data["window_days"] * 24 * 60
-
-    print(f"Loaded topology: {data['service']}")
-    print(f"Tiers in series: {', '.join(t['name'] for t in data['tiers'])}")
-    print(f"System availability   : {a_system * 100:.6f}%")
-
-    if a_system >= 1.0:
-        # log10(0) is undefined, so 100% modeled availability is a special case
-        print("Equivalent nines      : infinite (100% modeled availability)")
-        downtime = 0.0
-    else:
-        nines = -math.log10(1 - a_system)
-        downtime = (1 - a_system) * minutes_in_window
-        print(f"Equivalent nines      : {nines:.3f}")
-
-    print(f"Monthly downtime      : {downtime:.2f} minutes")
-    print()
-
-    valid_requests = data["monthly_valid_requests"]
-    predicted_failed = (downtime / minutes_in_window) * valid_requests
-
-    for slo in data["slo_targets_percent"]:
-        budget = valid_requests * (100 - slo) / 100
-        verdict = "MODEL PASS" if predicted_failed <= budget else "MODEL FAIL"
-        print(f"SLO {slo}%  budget {budget:.0f} failed requests   -> {verdict}")
-
-    print(f"Predicted failed requests this month: {predicted_failed:.0f}")
-    print("MODEL PASS means the model meets this SLO. It is not a measurement of real traffic.")
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except (OSError, yaml.YAMLError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        sys.exit(1)
+try {
+  main();
+} catch (error) {
+  console.error(`Error: ${error.message}`);
+  process.exitCode = 1;
+}
 ```
 
 **What this file does:** It checks your calculations and prints MODEL PASS or MODEL FAIL for each target.
 
 The script checks required keys, list structure, and numeric ranges before calculating. Missing files, invalid YAML, and invalid values produce an `Error:` message and a nonzero exit status. For example, a typo in `monthly_valid_requests` produces `Error: topology: missing required key 'monthly_valid_requests'`. Fix the named field and run again.
 
-The script accepts availability and SLO targets above 0% and up to 100%, a positive window length, and a positive integer request count. MODEL PASS means the calculation meets the target; you still need measurements from a live service.
+The script accepts availability and SLO targets above 0% and up to 100%, a positive window length, and a positive safe integer request count. MODEL PASS means the calculation meets the target; you still need measurements from a live service.
 
 ---
 
@@ -520,7 +454,6 @@ cp topology.yaml topology-improved.yaml
 </p>
 
 **Alternative file creation:** This screenshot uses `touch topology-improved.yaml`. If you use that command instead of `cp`, paste the complete improved YAML below; `touch` does not copy the baseline content.
-
 
 Open the new file. Under both `orders` and `inventory`, add one more `- availability_percent: 99.9` line. Align each new line with the existing copy's line. Save the file.
 
@@ -589,7 +522,6 @@ touch slo-document.md
 
 **File creation:** `touch` creates `slo-document.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
 
-
 **Your task:** Create `slo-document.md`. Use the five headings in the example below and write a few sentences under each. Use your calculations to support your choice. Include:
 
 - Which parts are included and which requests count as good or bad, using Lab 02’s rules.
@@ -654,7 +586,6 @@ touch reliability-report.md
 
 **File creation:** `touch` creates `reliability-report.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
 
-
 **Your task:** Create `reliability-report.md`. Keep it to about one page. Use the example headings below to organize your explanation, and copy the results from your own `calculations.md`. Include:
 
 - The service diagram and the assumptions used in the calculations.
@@ -715,11 +646,7 @@ does not always cause the same number of failures.
 
 **Your task:** Run both designs and compare the output with `calculations.md`. Save any corrections to your calculations, SLO document, and report.
 
-Make sure your terminal is in `reliability-lab`. If you opened a new terminal, activate the environment again:
-
-```bash
-source .venv/bin/activate
-```
+Make sure your terminal is in `reliability-lab`. If you opened a new terminal, return to that folder. No environment activation is needed.
 
 At this point, the folder should contain:
 
@@ -728,76 +655,35 @@ reliability-lab/
   topology.yaml
   topology-improved.yaml
   calculations.md
-  analyze_topology.py
+  analyze_topology.js
   slo-document.md
   reliability-report.md
-  .venv/
+  package.json
+  package-lock.json
+  node_modules/
 ```
 
-<p align="center">
-  <a href="images/whole-folder.png">
-    <img src="images/whole-folder.png" alt="Editor file explorer showing the six lab files and .venv folder" width="1000">
-  </a>
-</p>
-
-**Folder check:** All six deliverable files and the local virtual environment are present. Check that each file also contains its required content.
-
+**Folder check:** All six deliverable files and the local Node.js project files are present. Check that each file also contains its required content.
 
 Run the starting design first:
 
 ```bash
-python3 analyze_topology.py topology.yaml
+node analyze_topology.js topology.yaml
 ```
 
 **Explanation:** Calculates availability and compares the starting design with both targets.
-
-<p align="center">
-  <a href="images/analyze+topology-output.png">
-    <img src="images/analyze+topology-output.png" alt="Terminal baseline run reporting 99.740225 percent availability and MODEL FAIL for the 99.9 percent target" width="1000">
-  </a>
-</p>
-
-**Practical baseline run:** The new terminal capture matches the reference output below.
-
-
-<p align="center">
-  <a href="images/baseline-output.png">
-    <img src="images/baseline-output.png" alt="Actual baseline output with 99.740225 percent availability and 2598 predicted failures" width="1000">
-  </a>
-</p>
 
 **What to expect:** The baseline has **99.740225%** availability, **2.585** nines, and **112.22 minutes** of downtime over 30 days. Its **2,598** predicted failures fit within the 99.5% target's 5,000-failure budget, but exceed the 99.9% target's 1,000-failure budget.
 
 Run the design with extra Orders and Inventory copies:
 
 ```bash
-python3 analyze_topology.py topology-improved.yaml
+node analyze_topology.js topology-improved.yaml
 ```
 
 **Explanation:** Calculates the improved design with two copies of each app tier.
 
-<p align="center">
-  <a href="images/analyze+improved-topology.png">
-    <img src="images/analyze+improved-topology.png" alt="Terminal improved run reporting 99.939805 percent availability and MODEL PASS for both targets" width="1000">
-  </a>
-</p>
-
-**Practical improved run:** The new terminal capture matches the reference output below.
-
-
-<p align="center">
-  <a href="images/improved-output.png">
-    <img src="images/improved-output.png" alt="Actual improved output with 99.939805 percent availability and 602 predicted failures" width="1000">
-  </a>
-</p>
-
 **What to expect:** The improved design has **99.939805%** availability, **3.220** nines, and **26.00 minutes** of downtime. Its **602** predicted failures fit within both budgets, so both targets show `MODEL PASS`.
-
-<p align="center">
-  <a href="images/run-output.png">
-    <img src="images/run-output.png" alt="Both actual model runs shown together for comparison" width="1000">
-  </a>
-</p>
 
 | Result over 30 days | Baseline | Improved |
 | --- | --- | --- |
@@ -807,7 +693,7 @@ python3 analyze_topology.py topology-improved.yaml
 | 99.5% target | MODEL PASS | MODEL PASS |
 | 99.9% target | MODEL FAIL | MODEL PASS |
 
-`MODEL PASS` describes the calculation, not measured live traffic. Both commands completed with exit status `0`; `MODEL FAIL` for a target does not mean the Python command failed.
+`MODEL PASS` describes the calculation, not measured live traffic. Both commands completed with exit status `0`; `MODEL FAIL` for a target does not mean the Node.js command failed.
 
 ---
 
@@ -818,9 +704,9 @@ python3 analyze_topology.py topology-improved.yaml
 - `calculations.md` shows your working for both designs and both error budgets.
 - `slo-document.md` names the design and target you chose and explains how to measure it.
 - `reliability-report.md` compares the designs and states the assumptions and limitations.
-- Submit the six deliverable files. The `.venv` folder is only for running the lab locally.
+- Submit the six deliverable files. `package.json`, `package-lock.json`, and `node_modules/` support running the lab locally; they are not part of the six deliverables.
 
-If you see `No such file or directory`, check your current folder and the filename. If you see a YAML parsing error, check indentation and use spaces instead of tabs. If you see `No module named yaml`, activate `.venv` and repeat the PyYAML check in Step 4.
+If you see `No such file or directory`, check your current folder and the filename. If you see a YAML parsing error, check indentation and use spaces instead of tabs. If you see `Cannot find module 'yaml'`, run `npm install yaml@2` from `reliability-lab` and repeat the YAML check in Step 4.
 
 ## Understanding checks
 
@@ -832,4 +718,4 @@ If you see `No such file or directory`, check your current folder and the filena
 
 ## Conclusion
 
-You described a service, calculated its availability, and checked your answers with Python. You also chose a target and explained how extra copies help meet it. Use this model to study more complex request paths in later labs.
+You described a service, calculated its availability, and checked your answers with Node.js. You also chose a target and explained how extra copies help meet it. Use this model to study more complex request paths in later labs.
