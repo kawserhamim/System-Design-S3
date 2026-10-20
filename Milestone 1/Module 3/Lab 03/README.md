@@ -173,7 +173,9 @@ touch calculations.md
 
 **File creation:** `touch` creates `calculations.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
 
-**Your task:** Create `calculations.md` in the same folder. Record your working and answers there. A `.md` file is a plain text file that can contain headings and tables.
+**Your task:** Create `calculations.md` in the same folder. This file contains your written calculations, not JavaScript code. Open it in your text editor and write the formulas and answers as Markdown. You do not run this file with Node.js.
+
+Build it in three parts: **Baseline design** in this step, **SLO comparison** in Step 3, and **Improved design** in Step 5. A complete copyable example appears at the end of Step 5 under “What to write in calculations.md.” The filename is `calculations.md` (plural).
 
 Complete these calculations in order:
 
@@ -504,6 +506,104 @@ A_system ≈ 0.9995 x 0.999999 x 0.999999 x 0.9999 ≈ 0.99939805
 **Explanation:** Calculate each pair of copies first, then multiply the four tier values.
 
 Gateway and Database are still single points of failure: if either fails, the whole service stops working. A shared power or network problem can also stop both copies of a tier.
+
+
+### What to write in calculations.md
+
+Copy the entire Markdown block below into `calculations.md` and save it. Copy only the content inside the block. If you already wrote the earlier sections, use this example to check your work instead of adding duplicate sections.
+
+Here, `x` means multiply, `^2` means square, and `≈` means approximately equal. These formulas are written explanations; the JavaScript calculator in `analyze_topology.js` checks the results. Keep full precision while calculating and round only the final answers.
+
+```markdown
+# Availability Calculations, ordering-api
+
+## Inputs and assumptions
+
+- Measurement period: 30 days.
+- Minutes in the period: 30 x 24 x 60 = 43,200.
+- Counted requests: 1,000,000.
+- Every request needs Gateway, Orders, Inventory, and Database.
+- Failures are independent, and one working copy can handle all traffic.
+- Failed-request estimates assume traffic arrives at a constant rate.
+
+## Baseline design
+
+There is one copy of each tier. First, divide each percentage by 100:
+
+- Gateway: 99.95 / 100 = 0.9995.
+- Orders: 99.9 / 100 = 0.999.
+- Inventory: 99.9 / 100 = 0.999.
+- Database: 99.99 / 100 = 0.9999.
+
+All four tiers must work, so multiply their availabilities:
+
+A_system = 0.9995 x 0.999 x 0.999 x 0.9999
+A_system ≈ 0.9974022493
+Availability = A_system x 100 ≈ 99.740225%
+
+Unavailable fraction = 1 - A_system ≈ 0.0025977507
+Downtime = unavailable fraction x 43,200 ≈ 112.22 minutes
+Nines = -log10(unavailable fraction) ≈ 2.585
+Predicted failed requests = unavailable fraction x 1,000,000 ≈ 2,598
+
+The whole chain is less available than any individual tier because every tier must work.
+
+## SLO comparison
+
+For a 99.5% target:
+
+Allowed failure fraction = 1 - 0.995 = 0.005 (0.5%)
+Allowed failed requests = 1,000,000 x 0.005 = 5,000
+Equivalent time allowance = 43,200 x 0.005 = 216 minutes
+
+For a 99.9% target:
+
+Allowed failure fraction = 1 - 0.999 = 0.001 (0.1%)
+Allowed failed requests = 1,000,000 x 0.001 = 1,000
+Equivalent time allowance = 43,200 x 0.001 = 43.2 minutes
+
+The baseline predicts about 2,598 failed requests.
+This is below the 5,000-failure budget, so the model meets 99.5%.
+This is above the 1,000-failure budget, so the model misses 99.9%.
+
+## Improved design
+
+Add a second copy of Orders and a second copy of Inventory.
+Gateway and Database keep their original availability values.
+
+Each Orders copy has an unavailable fraction of 1 - 0.999 = 0.001.
+The Orders tier fails only when both copies fail:
+
+A_orders = 1 - (0.001 x 0.001) = 0.999999
+A_inventory = 1 - (0.001 x 0.001) = 0.999999
+
+Now multiply the four tier availabilities:
+
+A_system = 0.9995 x 0.999999 x 0.999999 x 0.9999
+A_system ≈ 0.9993980512
+Availability = A_system x 100 ≈ 99.939805%
+
+Unavailable fraction = 1 - A_system ≈ 0.0006019488
+Downtime = unavailable fraction x 43,200 ≈ 26.00 minutes
+Nines = -log10(unavailable fraction) ≈ 3.220
+Predicted failed requests = unavailable fraction x 1,000,000 ≈ 602
+
+## Results
+
+| Metric | Baseline | Improved |
+|---|---|---|
+| Availability | 99.740225% | 99.939805% |
+| Equivalent nines | 2.585 | 3.220 |
+| Downtime over 30 days | 112.22 minutes | 26.00 minutes |
+| Predicted failed requests | 2,598 | 602 |
+| Model meets 99.5% | Yes | Yes |
+| Model meets 99.9% | No | Yes |
+
+The improved design predicts about 602 failed requests, below both budgets.
+I recommend the improved design with a 99.9% SLO.
+These are modeled results. Use real good and bad request counts to check the live SLO.
+Shared failures and switching delays can make actual availability lower.
+```
 
 ---
 
