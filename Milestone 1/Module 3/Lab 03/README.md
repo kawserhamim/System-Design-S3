@@ -260,38 +260,21 @@ predicted_failed_requests ≈ (112.22 / 43200) x 1,000,000 ≈ 2,598
 
 ### Install Node.js and npm
 
-If Node.js and npm are already installed, skip to the version checks below. Otherwise, run these commands one at a time in Bash on Linux or macOS. This uses [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm#installing-and-updating) to install Node.js for your user account.
-
-First, install nvm:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
-```
-
-**Explanation:** Downloads and runs the nvm installer. You need `curl` available. On Ubuntu or Debian, install it if needed:
+On Ubuntu or Debian, run these commands one at a time. If Node.js and npm are already installed, skip to the version checks below.
 
 ```bash
 sudo apt update
-sudo apt install -y curl
 ```
 
-If you installed `curl` above, run the nvm installation command again.
-
-Load nvm into the current terminal:
+**Explanation:** Updates the list of available packages.
 
 ```bash
-export NVM_DIR="$HOME/.nvm"
-source "$NVM_DIR/nvm.sh"
+sudo apt install -y nodejs npm
 ```
 
-Install and select the latest Long-Term Support (LTS) version of Node.js:
+**Explanation:** Installs Node.js and npm.
 
-```bash
-nvm install --lts
-nvm use --lts
-```
-
-**Explanation:** Installs Node.js together with npm and selects it for this terminal. Run these nvm commands without `sudo`.
+On macOS, download and run the LTS installer from the [Node.js website](https://nodejs.org/en/download). It installs both Node.js and npm. Then reopen your terminal.
 
 Check that both commands print a version:
 
