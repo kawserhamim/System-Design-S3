@@ -258,7 +258,42 @@ predicted_failed_requests ≈ (112.22 / 43200) x 1,000,000 ≈ 2,598
 
 **Your task:** Set up a Node.js project, then create `analyze_topology.js` in your lab folder.
 
-You need Node.js and npm installed. Check that both commands print a version:
+### Install Node.js and npm
+
+If Node.js and npm are already installed, skip to the version checks below. Otherwise, run these commands one at a time in Bash on Linux or macOS. This uses [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm#installing-and-updating) to install Node.js for your user account.
+
+First, install nvm:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
+```
+
+**Explanation:** Downloads and runs the nvm installer. You need `curl` available. On Ubuntu or Debian, install it if needed:
+
+```bash
+sudo apt update
+sudo apt install -y curl
+```
+
+If you installed `curl` above, run the nvm installation command again.
+
+Load nvm into the current terminal:
+
+```bash
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+```
+
+Install and select the latest Long-Term Support (LTS) version of Node.js:
+
+```bash
+nvm install --lts
+nvm use --lts
+```
+
+**Explanation:** Installs Node.js together with npm and selects it for this terminal. Run these nvm commands without `sudo`.
+
+Check that both commands print a version:
 
 ```bash
 node --version
