@@ -1,6 +1,6 @@
 # Topology Driven Reliability Modeling
 
-![Ordering API with two copies each of Orders and Inventory](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/improved-topology.png)
+![Ordering API with two copies each of Orders and Inventory](images/improved-topology.png)
 
 Model a service and calculate its availability, the share of time it can handle requests. Compare two designs with Node.js, then choose a reliability target.
 
@@ -18,13 +18,13 @@ One reliability study containing six files: `topology.yaml`, `topology-improved.
 
 ## Understand required tiers
 
-![Client requests pass through Gateway, Orders, Inventory, and Database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/series-system-architecture.png)
+![Client requests pass through Gateway, Orders, Inventory, and Database](images/series-system-architecture.png)
 
 A tier is one required part of the service. Every request needs Gateway, Orders, Inventory, and Database, so multiply their availabilities. The client is outside the calculation.
 
 ## Understand extra copies
 
-![Either database copy can keep a parallel tier available](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/parallel-system-architecture.png)
+![Either database copy can keep a parallel tier available](images/parallel-system-architecture.png)
 
 A replica is an extra copy that does the same job. A parallel tier fails only when every copy fails. This diagram illustrates database copies; our improved design adds Orders and Inventory copies instead.
 
@@ -39,7 +39,7 @@ Assume independent failures, immediate routing to a working copy, and enough cap
 
 ## Understand SLOs
 
-![A higher success target leaves a smaller error budget](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/error-budget.png)
+![A higher success target leaves a smaller error budget](images/error-budget.png)
 
 A service level objective (SLO) is a success target. Its error budget is the allowed number of failures. The drawing enlarges the budgets for visibility; use the numbers below.
 
@@ -52,7 +52,7 @@ A service level objective (SLO) is a success target. Its error budget is the all
 
 ## Step 1: Create the lab folder
 
-![Terminal creating and entering reliability-lab](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/reliability-lab.png)
+![Terminal creating and entering reliability-lab](images/reliability-lab.png)
 
 Use Bash, a text editor, and Node.js with npm. This lab models a service; no service deployment is needed.
 
@@ -67,7 +67,7 @@ cd reliability-lab
 
 ## Step 2: Write the baseline topology
 
-![Terminal creating topology.yaml](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/topology-yaml.png)
+![Terminal creating topology.yaml](images/topology-yaml.png)
 ```bash
 touch topology.yaml
 ```
@@ -107,7 +107,7 @@ Use spaces for indentation. Database represents one logical managed multi-AZ ser
 
 ## Step 3: Calculate both error budgets
 
-![Terminal creating calculations.md](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/calculations.png)
+![Terminal creating calculations.md](images/calculations.png)
 ```bash
 touch calculations.md
 ```
@@ -141,32 +141,32 @@ Nines describe closeness to 100%: 99% is two nines and 99.9% is three. Failed-re
 
 ## Step 4: Write the calculator
 
-![Installed Node.js and npm versions](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/node-version.png)
+![Installed Node.js and npm versions](images/node-version.png)
 ```bash
 node --version
 npm --version
 ```
 
 **Explanation:** Confirm both tools are installed; otherwise install Node.js with npm before continuing.
-![npm init creates package.json](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/init.png)
+![npm init creates package.json](images/init.png)
 ```bash
 npm init -y
 ```
 
 **Explanation:** Create the local Node.js project.
-![npm installs the YAML package](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/yaml.png)
+![npm installs the YAML package](images/yaml.png)
 ```bash
 npm install yaml@2
 ```
 
 **Explanation:** Install the package used to read YAML.
-![Node.js prints YAML is ready](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/yaml-ready.png)
+![Node.js prints YAML is ready](images/yaml-ready.png)
 ```bash
 node -e "require('yaml'); console.log('YAML is ready')"
 ```
 
 **Explanation:** Confirm the YAML package loads before continuing.
-![Terminal creating analyze_topology.js](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/analyze.png)
+![Terminal creating analyze_topology.js](images/analyze.png)
 ```bash
 touch analyze_topology.js
 ```
@@ -300,7 +300,7 @@ Use the CommonJS project created above. Invalid YAML, missing fields, or invalid
 
 ## Step 5: Add service copies
 
-![Improved design with two Orders and two Inventory copies](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/improved-topology.png)
+![Improved design with two Orders and two Inventory copies](images/improved-topology.png)
 ```bash
 cp topology.yaml topology-improved.yaml
 ```
@@ -356,7 +356,7 @@ Gateway and the logical Database remain required single tiers. Either can still 
 
 ## Step 6: Write the SLO document
 
-![Terminal creating slo-document.md](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/slo.png)
+![Terminal creating slo-document.md](images/slo.png)
 ```bash
 touch slo-document.md
 ```
@@ -394,7 +394,7 @@ Check the live SLI against the target.
 
 ## Step 7: Write the reliability report
 
-![Terminal creating reliability-report.md](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/reliability-labb.png)
+![Terminal creating reliability-report.md](images/reliability-labb.png)
 ```bash
 touch reliability-report.md
 ```
@@ -434,23 +434,23 @@ live request counts to determine whether the service meets its SLO.
 
 ## Step 8: Run the following commands in the terminal
 
-![Completed lab folder with six deliverables and Node.js project files](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/whole-folder.png)
+![Completed lab folder with six deliverables and Node.js project files](images/whole-folder.png)
 
 Save all six files before running. `package.json`, `package-lock.json`, and `node_modules/` support local execution; submit the six deliverables.
 
-![Baseline output passes 99.5% and fails 99.9%](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/analyze+topology.png)
+![Baseline output passes 99.5% and fails 99.9%](images/analyze+topology.png)
 ```bash
 node analyze_topology.js topology.yaml
 ```
 
 **Explanation:** Calculate the baseline and compare both targets.
-![Improved output passes both targets](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/analyze+topology-improved.png)
+![Improved output passes both targets](images/analyze+topology-improved.png)
 ```bash
 node analyze_topology.js topology-improved.yaml
 ```
 
 **Explanation:** Calculate the improved design using the same calculator.
-![Terminal comparison of baseline and improved results](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/run-output.png)
+![Terminal comparison of baseline and improved results](images/run-output.png)
 
 **What to expect:** Baseline availability is 99.740225%, with 2,598 predicted failures. Improved availability is 99.939805%, with 602 predicted failures. Compare these results with your calculations and correct any differences.
 
