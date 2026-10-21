@@ -1,119 +1,78 @@
 # Topology Driven Reliability Modeling
 
-Build a model of a small service and calculate how often it should be available. Check your answers with Node.js. Then write a reliability target and a short report explaining your design.
+![Ordering API with two copies each of Orders and Inventory](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/improved-topology.png)
+
+Model a service and calculate its availability, the share of time it can handle requests. Compare two designs with Node.js, then choose a reliability target.
 
 ## Objective
 
 By the end of this lab, you can:
 
-- Describe the parts of a service in `topology.yaml`.
-- Calculate the availability of the whole service by hand, then check it with Node.js.
-- Choose a reliability target and explain why your design can meet it.
+- Describe a service in YAML.
+- Calculate availability for required parts and extra copies.
+- Choose a target using an error budget.
 
 ## Deliverable
 
-Create six files: `topology.yaml`, `topology-improved.yaml`, `calculations.md`, `analyze_topology.js`, `slo-document.md`, and `reliability-report.md`. Keep the report to one page. Choose a target for either the starting design, called the baseline, or the improved design.
+One reliability study containing six files: `topology.yaml`, `topology-improved.yaml`, `calculations.md`, `analyze_topology.js`, `slo-document.md`, and `reliability-report.md`.
 
-## How the parts work together
+## Understand required tiers
 
-![Serial dependency diagram](images/series-system-architecture.png)
+![Client requests pass through Gateway, Orders, Inventory, and Database](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/series-system-architecture.png)
 
-A topology describes how the parts of a system connect. Each stage is called a tier. Availability means the share of time a service can handle requests.
+A tier is one required part of the service. Every request needs Gateway, Orders, Inventory, and Database, so multiply their availabilities. The client is outside the calculation.
 
-In a serial chain, every tier must work for a request to succeed. Orders and Inventory do different jobs, so the request needs both.
+## Understand extra copies
 
-Multiply the availability of the required parts to find the availability of the whole system. This is called composite availability. The whole chain cannot be more available than its least available part.
+![Either database copy can keep a parallel tier available](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/parallel-system-architecture.png)
 
-Will this chain be more or less available than its least available part? Write down your guess and check it in Step 2.
-
-## How extra copies help
-
-![Parallel availability: either database copy can keep a tier available](images/parallel-system-architecture.png)
-
-Parallel copies do the same job. The diagram shows two database copies as an example. In Step 5, you add copies of Orders and Inventory and keep one database.
-
-An extra copy is called a replica. If either of two copies can handle the request, use this formula:
+A replica is an extra copy that does the same job. A parallel tier fails only when every copy fails. This diagram illustrates database copies; our improved design adds Orders and Inventory copies instead.
 
 ```text
 A_tier = 1 - (1 - A_copy1) x (1 - A_copy2)
+A_system = A_gateway x A_orders x A_inventory x A_database
 ```
 
-**Explanation:** The tier fails only when both copies fail.
+**Explanation:** Use decimals, such as 0.999 for 99.9%.
 
-A tier with one copy has that copy's availability. Step 1 starts with one copy per tier; Step 5 adds more.
+Assume independent failures, immediate routing to a working copy, and enough capacity in one copy. Shared failures, retries, and switching delays are excluded. These availability values are practice inputs, not measurements.
 
-## SLO and error budget
+## Understand SLOs
 
-![SLO and error budget: a tighter target allows fewer failures](images/error-budget.png)
+![A higher success target leaves a smaller error budget](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/error-budget.png)
 
-The picture makes the error budgets look larger so they are easy to see. Use the numbers for your calculations.
+A service level objective (SLO) is a success target. Its error budget is the allowed number of failures. The drawing enlarges the budgets for visibility; use the numbers below.
 
-A service level objective (SLO) is a target for how often requests should succeed. A 99.9% SLO allows 0.1% of requests to fail. These allowed failures are the error budget. A higher target allows fewer failures.
-
-## What we assume in this model
-
-A model is a simple version of a real system. Our calculations use these assumptions:
-
-- The client sends requests but is not part of the calculation. We include only Gateway, Orders, Inventory, and Database.
-- All four tiers must work for a request to succeed.
-- Failures are independent: one part failing does not make another more likely to fail.
-- The model leaves out repeated attempts, backup request paths, and the time needed to switch to a working copy.
-- If a copy fails, requests reach a working copy. That copy can handle all the traffic alone.
-- Copies can fail together if they share a power supply, network, or location. The calculation does not include these shared failures.
-
-The availability values in this lab are practice numbers, not measurements from a real service.
+| Target | Failure allowance | Failures per 1,000,000 requests | Equivalent minutes in 30 days |
+|---|---|---|---|
+| 99.5% | 0.5% | 5,000 | 216 |
+| 99.9% | 0.1% | 1,000 | 43.2 |
 
 ---
 
-## Before you start: Create a lab folder
+## Step 1: Create the lab folder
 
-You need a terminal, Node.js with npm, and a text editor. The terminal commands in this lab use Bash on Linux or macOS.
+![Terminal creating and entering reliability-lab](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/reliability-lab.png)
 
-Run these commands once:
+Use Bash, a text editor, and Node.js with npm. This lab models a service; no service deployment is needed.
 
 ```bash
 mkdir -p reliability-lab
 cd reliability-lab
 ```
 
-Open this folder in your text editor. Create and save all six deliverable files here. Run every remaining terminal command from this folder.
+**Explanation:** Create the workspace and run all remaining commands here.
 
-<p align="center">
-  <a href="images/reliability-lab.png">
-    <img src="images/reliability-lab.png" alt="Terminal creating and entering the reliability-lab folder" width="1000">
-  </a>
-</p>
+---
 
-**Folder setup:** The terminal is now inside `reliability-lab`, where the remaining commands should run.
+## Step 2: Write the baseline topology
 
-You are modeling a service, not deploying one. You do not need to start a Gateway, Orders service, Inventory service, or Database.
-
-## Step 1: Describe the starting design in topology.yaml
-Create the file from your lab folder:
-
+![Terminal creating topology.yaml](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/topology-yaml.png)
 ```bash
 touch topology.yaml
 ```
 
-<p align="center">
-  <a href="images/topology-yaml.png">
-    <img src="images/topology-yaml.png" alt="Terminal creating the empty topology.yaml file" width="1000">
-  </a>
-</p>
-
-**File creation:** `touch` creates `topology.yaml` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
-
-**Your task:** Create a file named `topology.yaml` in your lab folder. Copy the YAML block below into it and save it.
-
-A **tier** is one required part of the service. A **copy** is an instance that can do that tier's job. The starting design has four tiers, with one copy in each tier.
-
-For this exercise, a successful request needs every tier in this path:
-
-```text
-Client  --->  Gateway  --->  Orders  --->  Inventory  --->  Database
-              (99.95%)       (99.9%)       (99.9%)          (99.99%)
-```
-
+**Explanation:** Create the file, then paste the YAML below in your editor.
 ```yaml
 service: ordering-api
 window_days: 30
@@ -140,237 +99,79 @@ tiers:
       - availability_percent: 99.99
 ```
 
-Read the file using this guide:
+**What this file does:** Defines four required tiers with one copy each.
 
-| Field | Meaning in this lab |
-|---|---|
-| `service` | A name for the service: `ordering-api`. |
-| `window_days` | The period we model: 30 days. |
-| `monthly_valid_requests` | The number of requests counted during that period: 1,000,000. |
-| `slo_targets_percent` | The two success targets we will compare: 99.5% and 99.9%. |
-| `tiers` | The four parts that must all work. |
-| `copies` | The instances that can do one tier's job. |
-| `availability_percent` | How often a copy is assumed to be available. Enter `99.95`, not `0.9995`. |
-
-**Check before continuing:** Your file should contain four `name` entries and one `availability_percent` entry under each. Keep the indentation exactly as shown. Use spaces, not tabs; YAML uses indentation to group values. Each `-` starts a list item.
-
-For this exercise, assume the Database is a managed multi-AZ service with 99.99% availability. This is a practice assumption, not a provider guarantee. Its internal redundancy is already included in that value, so represent it as one logical copy in the model.
+Use spaces for indentation. Database represents one logical managed multi-AZ service; its assumed internal redundancy is already included in 99.99%.
 
 ---
 
-## Step 2: Calculate availability by hand
-Create the file from your lab folder:
+## Step 3: Calculate both error budgets
 
+![Terminal creating calculations.md](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/calculations.png)
 ```bash
 touch calculations.md
 ```
 
-<p align="center">
-  <a href="images/calculations.png">
-    <img src="images/calculations.png" alt="Terminal creating the empty calculations.md file" width="1000">
-  </a>
-</p>
+**Explanation:** Create your written calculation file.
 
-**File creation:** `touch` creates `calculations.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
+Write the following working in `calculations.md`. A 30-day window contains 43,200 minutes. Keep full precision until the final answer.
 
-**Your task:** Create `calculations.md` in the same folder. This file contains your written calculations, not JavaScript code. Open it in your text editor and write the formulas and answers as Markdown. You do not run this file with Node.js.
+```markdown
+# Availability calculations
 
-Build it in three parts: **Baseline design** in this step, **SLO comparison** in Step 3, and **Improved design** in Step 5. A complete copyable example appears at the end of Step 5 under “What to write in calculations.md.” The filename is `calculations.md` (plural).
+## Baseline
+A = 0.9995 x 0.999 x 0.999 x 0.9999 = 0.99740224934995
+Availability = A x 100 = 99.740225% (rounded)
+Unavailable fraction = 1 - A
+Downtime = (1 - A) x 43200 = 112.22 minutes
+Nines = -log10(1 - A) = 2.585
+Predicted failures = (1 - A) x 1000000 = 2598 (rounded)
 
-Complete these calculations in order:
-
-1. Convert each component's percentage to a decimal.
-2. Multiply the four decimals to get system availability.
-3. Multiply that result by 100 to express it as a percentage.
-4. Calculate the unavailable fraction: `1 - A_system`.
-5. Multiply the unavailable fraction by 43,200 to estimate downtime in minutes.
-6. Use the nines formula below to describe the result.
-
-For example, the Gateway's availability becomes:
-
-```text
-99.95 / 100 = 0.9995
+## SLO comparison
+99.5% budget = (1 - 0.995) x 1000000 = 5000 failures
+99.9% budget = (1 - 0.999) x 1000000 = 1000 failures
+The baseline meets 99.5% but misses 99.9% in this model.
 ```
 
-Use the formulas below. Here, `A` means availability as a decimal. A 30-day month has 43,200 minutes.
+**What this file does:** Records the baseline formulas and compares predicted failures with both budgets.
 
-Nines describe how close availability is to 100%: 99% is two nines, and 99.9% is three. A result of 2.585 nines falls between them. Use a calculator with `log10` to find this value.
-
-```text
-A_system = A_gateway x A_orders x A_inventory x A_database
-nines ≈ -log10(1 - A_system)
-downtime_minutes ≈ (1 - A_system) x 43200
-```
-
-Try the calculation first, then compare your answer below.
-
-```text
-A_system = 0.9995 x 0.999 x 0.999 x 0.9999 ≈ 0.99740225
-A_system percent ≈ 99.740225%
-nines ≈ 2.585
-downtime ≈ 112.22 minutes over 30 days
-```
-
-**Explanation:** The whole chain has lower availability than any of its parts, which answers your earlier guess.
+Nines describe closeness to 100%: 99% is two nines and 99.9% is three. Failed-request estimates assume constant traffic; downtime during busy periods can cause more failures.
 
 ---
 
-## Step 3: Compare two SLO targets and their error budgets
+## Step 4: Write the calculator
 
-**Your task:** Add an “SLO comparison” section to `calculations.md`.
-
-An **SLO** is the success target you choose. An **error budget** is the number of failures that target allows. For example, a 99.5% success target allows 0.5% of counted requests to fail.
-
-Use 1,000,000 counted requests over 30 days. For each target, calculate the allowed failure fraction and multiply it by 1,000,000:
-
-```text
-For 99.5%:
-allowed_failure_fraction = 1 - 0.995 = 0.005
-allowed_failed_requests = 1,000,000 x 0.005 = 5,000
-```
-
-Repeat this for 99.9%, then compare your answers with the table below. Record which target the baseline can meet in the model.
-
-```text
-allowed_failure_fraction = 1 - (SLO_percent / 100)
-allowed_failed_requests = valid_requests x allowed_failure_fraction
-```
-
-| SLO target | Allowed failure fraction | Allowed failed requests | Equivalent time allowance | Baseline meets target |
-|---|---|---|---|---|
-| 99.5% | 0.5% | 5,000 | 216 minutes | Yes |
-| 99.9% | 0.1% | 1,000 | 43.2 minutes | No |
-
-The time allowance is the downtime that matches the target over 30 days. To estimate failed requests from downtime, assume requests arrive at the same rate all month and fail while the service is down:
-
-```text
-predicted_failed_requests = (downtime_minutes / 43200) x valid_requests
-predicted_failed_requests ≈ (112.22 / 43200) x 1,000,000 ≈ 2,598
-```
-
-**Explanation:** About 2,598 failures fit within the 99.5% budget but exceed the 99.9% budget.
-
-**Traffic caveat:** The 2,598 estimate assumes a uniform request rate. The same downtime during peak traffic can cause more failures; during quiet periods it can cause fewer. Equivalent downtime alone does not establish a request-based SLO result. Use real request counts to check whether a live service meets its target. If the number of requests changes, calculate the budget again.
-
----
-
-## Step 4: Write the Node.js calculator
-
-**Your task:** Set up a Node.js project, then create `analyze_topology.js` in your lab folder.
-
-### Install Node.js and npm
-
-On Ubuntu or Debian, run these commands one at a time. If Node.js and npm are already installed, skip to the version checks below.
-
-```bash
-sudo apt update
-```
-
-**Explanation:** Updates the list of available packages.
-
-```bash
-sudo apt install -y nodejs npm
-```
-
-**Explanation:** Installs Node.js and npm.
-
-On macOS, download and run the LTS installer from the [Node.js website](https://nodejs.org/en/download). It installs both Node.js and npm. Then reopen your terminal.
-
-Check that both commands print a version:
-
+![Installed Node.js and npm versions](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/node-version.png)
 ```bash
 node --version
 npm --version
 ```
 
-<p align="center">
-  <a href="images/node-version.png">
-    <img src="images/node-version.png" alt="Terminal displaying the installed Node.js and npm versions" width="1000">
-  </a>
-</p>
-
-**Version check:** Both commands print a version number. Your versions may differ.
-
-Run the following commands one at a time from `reliability-lab`. Some setup screenshots show `~/code` in the prompt; use your own `reliability-lab` folder for these commands.
-
+**Explanation:** Confirm both tools are installed; otherwise install Node.js with npm before continuing.
+![npm init creates package.json](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/init.png)
 ```bash
 npm init -y
 ```
 
-**Explanation:** Creates `package.json` to track the lab's Node.js project and packages.
-
-<p align="center">
-  <a href="images/init.png">
-    <img src="images/init.png" alt="Terminal running npm init -y and creating package.json" width="1000">
-  </a>
-</p>
-
-**Project setup:** npm creates `package.json`. The generated project name depends on your folder name.
-
+**Explanation:** Create the local Node.js project.
+![npm installs the YAML package](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/yaml.png)
 ```bash
 npm install yaml@2
 ```
 
-**Explanation:** Installs the [yaml package](https://eemeli.org/yaml/) that reads YAML files. npm creates `node_modules/` and `package-lock.json`. Dependencies stay in this lab folder; no environment activation is needed.
-
-<p align="center">
-  <a href="images/yaml.png">
-    <img src="images/yaml.png" alt="Terminal successfully installing yaml version 2 with npm" width="1000">
-  </a>
-</p>
-
-**Package installation:** npm reports that the YAML package was added.
-
-**Check the installation:** Confirm that Node.js can read YAML:
-
+**Explanation:** Install the package used to read YAML.
+![Node.js prints YAML is ready](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/yaml-ready.png)
 ```bash
 node -e "require('yaml'); console.log('YAML is ready')"
 ```
 
-Expected output:
-
-```text
-YAML is ready
-```
-
-<p align="center">
-  <a href="images/yaml-ready.png">
-    <img src="images/yaml-ready.png" alt="Terminal loading the yaml package with Node.js and printing YAML is ready" width="1000">
-  </a>
-</p>
-
-**Import check:** `YAML is ready` confirms that Node.js can load the YAML package.
-
-If installation fails, read the error message first. If npm cannot reach the package registry, check your network access and retry `npm install yaml@2`. If `node` or `npm` is not found, install Node.js with npm before continuing. Continue only after the import check succeeds.
-
-Now create `analyze_topology.js`, copy the complete code below into it, and save it. You can use the supplied code without writing it from scratch. Your job is to understand its calculation and compare its results with your hand calculations.
-
+**Explanation:** Confirm the YAML package loads before continuing.
+![Terminal creating analyze_topology.js](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/analyze.png)
 ```bash
 touch analyze_topology.js
 ```
 
-<p align="center">
-  <a href="images/analyze.png">
-    <img src="images/analyze.png" alt="Terminal creating analyze_topology.js with touch" width="1000">
-  </a>
-</p>
-
-**File creation:** This creates the calculator file. Paste and save the JavaScript below before running it.
-
-**Calculator file:** After creating the file, paste and save the complete JavaScript code below before running it. This code uses CommonJS, the default module format in the project created by `npm init -y`.
-
-The calculator follows this order:
-
-1. Read the YAML file.
-2. Calculate availability for the copies in each tier.
-3. Multiply the tier availabilities because every tier is required.
-4. Calculate downtime and predicted failed requests.
-5. Compare predicted failures with each target's error budget.
-
-```text
-topology.yaml -> load -> parallel availability per tier -> multiply tiers -> nines, downtime, SLO check
-```
-
+**Explanation:** Create the calculator file and paste the complete code below.
 ```javascript
 const fs = require('node:fs');
 const YAML = require('yaml');
@@ -491,28 +292,20 @@ try {
 }
 ```
 
-**What this file does:** It checks your calculations and prints MODEL PASS or MODEL FAIL for each target.
+**What this file does:** Validates the YAML, calculates availability, and compares predicted failures with each SLO budget.
 
-The script checks required keys, list structure, and numeric ranges before calculating. Missing files, invalid YAML, and invalid values produce an `Error:` message and a nonzero exit status. For example, a typo in `monthly_valid_requests` produces `Error: topology: missing required key 'monthly_valid_requests'`. Fix the named field and run again.
-
-The script accepts availability and SLO targets above 0% and up to 100%, a positive window length, and a positive safe integer request count. MODEL PASS means the calculation meets the target; you still need measurements from a live service.
+Use the CommonJS project created above. Invalid YAML, missing fields, or invalid numbers produce an `Error:` message and a nonzero exit status.
 
 ---
 
-## Step 5: Add extra service copies
+## Step 5: Add service copies
 
-**Your task:** Make a copy of `topology.yaml` and name it `topology-improved.yaml`. You can use your editor's “Save As” option or run:
-
+![Improved design with two Orders and two Inventory copies](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/improved-topology.png)
 ```bash
 cp topology.yaml topology-improved.yaml
 ```
 
-Open the new file. Under both `orders` and `inventory`, add one more `- availability_percent: 99.9` line. Align each new line with the existing copy's line. Save the file.
-
-Compare your file with the complete example below. Orders and Inventory should each have two copies; Gateway and Database should each have one.
-
-![Improved topology with replicas](images/improved-topology.png)
-
+**Explanation:** Copy the baseline, then replace the new file with this design.
 ```yaml
 service: ordering-api
 window_days: 30
@@ -539,356 +332,132 @@ tiers:
       - availability_percent: 99.99
 ```
 
-**What this file does:** It adds a second copy of Orders and Inventory so each tier can keep working if one copy fails.
+**What this file does:** Adds a second Orders copy and a second Inventory copy.
 
-**Next:** Add an “Improved design” section to `calculations.md`. Calculate the availability of each pair first, then multiply the four tier results.
-
-Each Orders copy has an unavailable fraction of `1 - 0.999 = 0.001`. With independent failures, both copies are unavailable together for a fraction `0.001 x 0.001 = 0.000001`. Subtract this from 1 to get the tier's availability.
-
-Repeat the calculation for Inventory. Then calculate system availability, nines, downtime, and predicted failed requests. Check your working against:
-
-```text
-A_orders ≈ 1 - (1 - 0.999)^2 ≈ 0.999999
-A_inventory ≈ 1 - (1 - 0.999)^2 ≈ 0.999999
-A_system ≈ 0.9995 x 0.999999 x 0.999999 x 0.9999 ≈ 0.99939805
-```
-
-**Explanation:** Calculate each pair of copies first, then multiply the four tier values.
-
-Gateway and Database are still single points of failure: if either fails, the whole service stops working. A shared power or network problem can also stop both copies of a tier.
-
-### What to write in calculations.md
-
-Copy the entire Markdown block below into `calculations.md` and save it. Copy only the content inside the block. If you already wrote the earlier sections, use this example to check your work instead of adding duplicate sections.
-
-Here, `x` means multiply, `^2` means square, and `≈` means approximately equal. These formulas are written explanations; the JavaScript calculator in `analyze_topology.js` checks the results. Keep full precision while calculating and round only the final answers.
+Append this working to `calculations.md`:
 
 ```markdown
-# Availability Calculations, ordering-api
-
-## Inputs and assumptions
-
-- Measurement period: 30 days.
-- Minutes in the period: 30 x 24 x 60 = 43,200.
-- Counted requests: 1,000,000.
-- Every request needs Gateway, Orders, Inventory, and Database.
-- Failures are independent, and one working copy can handle all traffic.
-- Failed-request estimates assume traffic arrives at a constant rate.
-
-## Baseline design
-
-There is one copy of each tier. First, divide each percentage by 100:
-
-- Gateway: 99.95 / 100 = 0.9995.
-- Orders: 99.9 / 100 = 0.999.
-- Inventory: 99.9 / 100 = 0.999.
-- Database: 99.99 / 100 = 0.9999.
-
-All four tiers must work, so multiply their availabilities:
-
-A_system = 0.9995 x 0.999 x 0.999 x 0.9999
-A_system ≈ 0.9974022493
-Availability = A_system x 100 ≈ 99.740225%
-
-Unavailable fraction = 1 - A_system ≈ 0.0025977507
-Downtime = unavailable fraction x 43,200 ≈ 112.22 minutes
-Nines = -log10(unavailable fraction) ≈ 2.585
-Predicted failed requests = unavailable fraction x 1,000,000 ≈ 2,598
-
-The whole chain is less available than any individual tier because every tier must work.
-
-## SLO comparison
-
-For a 99.5% target:
-
-Allowed failure fraction = 1 - 0.995 = 0.005 (0.5%)
-Allowed failed requests = 1,000,000 x 0.005 = 5,000
-Equivalent time allowance = 43,200 x 0.005 = 216 minutes
-
-For a 99.9% target:
-
-Allowed failure fraction = 1 - 0.999 = 0.001 (0.1%)
-Allowed failed requests = 1,000,000 x 0.001 = 1,000
-Equivalent time allowance = 43,200 x 0.001 = 43.2 minutes
-
-The baseline predicts about 2,598 failed requests.
-This is below the 5,000-failure budget, so the model meets 99.5%.
-This is above the 1,000-failure budget, so the model misses 99.9%.
-
 ## Improved design
-
-Add a second copy of Orders and a second copy of Inventory.
-Gateway and Database keep their original availability values.
-
-Each Orders copy has an unavailable fraction of 1 - 0.999 = 0.001.
-The Orders tier fails only when both copies fail:
-
-A_orders = 1 - (0.001 x 0.001) = 0.999999
-A_inventory = 1 - (0.001 x 0.001) = 0.999999
-
-Now multiply the four tier availabilities:
-
-A_system = 0.9995 x 0.999999 x 0.999999 x 0.9999
-A_system ≈ 0.9993980512
-Availability = A_system x 100 ≈ 99.939805%
-
-Unavailable fraction = 1 - A_system ≈ 0.0006019488
-Downtime = unavailable fraction x 43,200 ≈ 26.00 minutes
-Nines = -log10(unavailable fraction) ≈ 3.220
-Predicted failed requests = unavailable fraction x 1,000,000 ≈ 602
-
-## Results
-
-| Metric | Baseline | Improved |
-|---|---|---|
-| Availability | 99.740225% | 99.939805% |
-| Equivalent nines | 2.585 | 3.220 |
-| Downtime over 30 days | 112.22 minutes | 26.00 minutes |
-| Predicted failed requests | 2,598 | 602 |
-| Model meets 99.5% | Yes | Yes |
-| Model meets 99.9% | No | Yes |
-
-The improved design predicts about 602 failed requests, below both budgets.
-I recommend the improved design with a 99.9% SLO.
-These are modeled results. Use real good and bad request counts to check the live SLO.
-Shared failures and switching delays can make actual availability lower.
+A_orders = 1 - (1 - 0.999)^2 = 0.999999
+A_inventory = 1 - (1 - 0.999)^2 = 0.999999
+A = 0.9995 x 0.999999 x 0.999999 x 0.9999
+Availability = A x 100 = 99.939805% (rounded)
+Downtime = (1 - A) x 43200 = 26.00 minutes
+Nines = -log10(1 - A) = 3.220
+Predicted failures = (1 - A) x 1000000 = 602 (rounded)
+The improved model meets both targets.
 ```
+
+**What this file does:** Adds the parallel-tier calculation and improved results.
+
+Gateway and the logical Database remain required single tiers. Either can still stop the service.
 
 ---
 
 ## Step 6: Write the SLO document
-Create the file from your lab folder:
 
+![Terminal creating slo-document.md](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/slo.png)
 ```bash
 touch slo-document.md
 ```
 
-<p align="center">
-  <a href="images/slo.png">
-    <img src="images/slo.png" alt="Terminal creating the empty slo-document.md file" width="1000">
-  </a>
-</p>
-
-**File creation:** `touch` creates `slo-document.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
-
-**Your task:** Create `slo-document.md`. Use the five headings in the example below and write a few sentences under each. Use your calculations to support your choice. Include:
-
-- Which parts are included and which requests count as good or bad, using Lab 02’s rules.
-- The time period: the most recent 30 days.
-- Both targets and their budgets from Step 3.
-- Your chosen target and why you chose it.
-- How you will count good and bad requests in the live service.
-
-Write your own version first, then compare it with this example.
-
+**Explanation:** Create the target document and fill it using these headings.
 ```markdown
 # SLO Document, ordering-api
 
 ## Service boundary
-The calculation includes Gateway, Orders, Inventory, and Database. It does not include the client.
-Following Lab 02, skip cancelled requests (499) and health checks (`/healthz`).
-Of the remaining requests, count 2xx, 3xx, and 4xx responses as good and 5xx responses as bad.
-The service level indicator (SLI) is good requests divided by all counted requests.
+Include Gateway, Orders, Inventory, and Database. Exclude the client.
+Following Lab 02, skip 499 responses and /healthz requests.
+Count remaining 2xx, 3xx, and 4xx responses as good; count 5xx as bad.
+SLI (service level indicator) = good requests / all counted requests.
 
 ## Measurement window
-Use the most recent 30 days, matching `window_days` in `topology.yaml`.
-This is a rolling window: it moves forward each day.
+Use the most recent 30 days, a rolling window.
 
 ## Targets to compare
-
-These example budgets use 1,000,000 counted requests in 30 days.
-For real traffic, multiply the counted requests by the allowed failure fraction.
-
-| Target | Allowed failure fraction | Allowed failed requests per month | Equivalent time allowance |
-|---|---|---|---|
-| 99.5% | 0.5% | 5,000 | 216 minutes |
-| 99.9% | 0.1% | 1,000 | 43.2 minutes |
-
-The baseline topology, at 99.740225% modeled availability, meets the 99.5% target but not the 99.9% target.
+At 1,000,000 counted requests, 99.5% allows 5,000 failures
+and 99.9% allows 1,000. Recalculate budgets when traffic changes.
 
 ## Selected target
-Choose 99.9% for the improved design in `topology-improved.yaml`, after adding the extra copies.
-Its calculated availability is 99.939805%, which meets this target in the model.
+Choose 99.9% for topology-improved.yaml.
+Its modeled availability is 99.939805%.
 
-## How this will be measured in production
-Count good and bad responses at the gateway. Use these counts to check the target.
-Use separate checks from outside the system to find failures that never reach the gateway.
-The model helps with planning; live traffic may give different results.
+## Production measurement
+Count good and bad responses at the gateway.
+Use external checks to detect failures that never reach the gateway.
+Check the live SLI against the target.
 ```
 
-**What this file does:** It records your target, the design it applies to, and how to check real results.
+**What this file does:** Defines the target, counted requests, and measurement plan.
 
 ---
 
 ## Step 7: Write the reliability report
-Create the file from your lab folder:
 
+![Terminal creating reliability-report.md](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/reliability-labb.png)
 ```bash
 touch reliability-report.md
 ```
 
-<p align="center">
-  <a href="images/reliability-labb.png">
-    <img src="images/reliability-labb.png" alt="Terminal creating the empty reliability-report.md file" width="1000">
-  </a>
-</p>
-
-**File creation:** `touch` creates `reliability-report.md` if it does not exist. Add the content described below in your editor; this screenshot shows file creation only.
-
-**Your task:** Create `reliability-report.md`. Keep it to about one page. Use the example headings below to organize your explanation, and copy the results from your own `calculations.md`. Include:
-
-- The service diagram and the assumptions used in the calculations.
-- Results for the starting design: availability, nines, downtime, and estimated failed requests.
-- The extra copies you plan to add.
-- A table comparing results before and after the change.
-- The design and target you recommend, with a reason.
-- What the model leaves out.
-
-Write your own version first, then compare it with this example.
-
+**Explanation:** Create a report of about one page using the structure below.
 ```markdown
 # Reliability Report, ordering-api
 
 ## Service and assumptions
 Client -> [Gateway -> Orders -> Inventory -> Database]
+Calculate only the bracketed tiers. Assume independent failures,
+immediate routing, constant traffic, and sufficient replica capacity.
 
-Only the parts inside brackets are included in the calculation. We assume failures are independent
-and working copies can handle all requests. We leave out repeated attempts and switching delays.
-
-## Baseline result
-| Metric | Value |
-|---|---|
-| Composite availability | 99.740225% |
-| Equivalent nines | 2.585 |
-| Monthly downtime | 112.22 minutes |
-| Predicted failed requests, 1,000,000 valid requests | 2,598 |
-
-The model meets the 99.5% target but misses the 99.9% target.
-
-## Proposed change
-Add one extra copy each to Orders and Inventory. Keep one Gateway and one Database.
-
-## Before and after
+## Results over 30 days
 | Metric | Baseline | Improved |
 |---|---|---|
 | Availability | 99.740225% | 99.939805% |
 | Nines | 2.585 | 3.220 |
-| Monthly downtime | 112.22 min | 26.00 min |
-| Model meets 99.5% SLO | Yes | Yes |
-| Model meets 99.9% SLO | No | Yes |
+| Downtime | 112.22 minutes | 26.00 minutes |
+| Predicted failures | 2,598 | 602 |
+| Meets 99.5% | Yes | Yes |
+| Meets 99.9% | No | Yes |
 
 ## Recommendation
-Use the improved design with two copies each of Orders and Inventory. Choose a 99.9% target
-for that design. Improve Gateway and Database next: failure of either can still stop the service.
+Add one Orders copy and one Inventory copy. Choose a 99.9% SLO.
+Improve Gateway and Database next because either can stop the service.
 
-## Model limitations
-A shared power or network problem can stop both copies at once. Repeated requests and backup
-paths also change the results. Busy periods have more requests, so one minute of downtime
-does not always cause the same number of failures.
+## Limitations
+Shared failures and switching delays can lower real availability.
+Retries and backup paths can change results. Traffic varies, so use
+live request counts to determine whether the service meets its SLO.
 ```
 
-**What this file does:** It compares both designs and explains your choice and what could go wrong.
+**What this file does:** Compares both designs and explains the recommendation and limits.
 
 ---
 
 ## Step 8: Run the following commands in the terminal
 
-**Your task:** Run both designs and compare the output with `calculations.md`. Save any corrections to your calculations, SLO document, and report.
+![Completed lab folder with six deliverables and Node.js project files](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/whole-folder.png)
 
-Make sure your terminal is in `reliability-lab`. If you opened a new terminal, return to that folder. No environment activation is needed.
+Save all six files before running. `package.json`, `package-lock.json`, and `node_modules/` support local execution; submit the six deliverables.
 
-At this point, the folder should contain:
-
-```text
-reliability-lab/
-  topology.yaml
-  topology-improved.yaml
-  calculations.md
-  analyze_topology.js
-  slo-document.md
-  reliability-report.md
-  package.json
-  package-lock.json
-  node_modules/
-```
-
-**Folder check:** All six deliverable files and the local Node.js project files are present. Check that each file also contains its required content.
-
-<p align="center">
-  <a href="images/whole-folder.png">
-    <img src="images/whole-folder.png" alt="Editor showing the six deliverables, package.json, package-lock.json, and node_modules inside reliability-lab" width="400">
-  </a>
-</p>
-
-**Project folder:** Your completed lab should have the same files and dependency folder.
-
-Run the starting design first:
-
+![Baseline output passes 99.5% and fails 99.9%](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/analyze+topology.png)
 ```bash
 node analyze_topology.js topology.yaml
 ```
 
-**Explanation:** Calculates availability and compares the starting design with both targets.
-
-<p align="center">
-  <a href="images/analyze+topology.png">
-    <img src="images/analyze+topology.png" alt="Node.js baseline output showing 99.740225 percent availability and MODEL FAIL for the 99.9 percent SLO" width="1000">
-  </a>
-</p>
-
-**Baseline output:** The calculator predicts 2,598 failed requests and passes only the 99.5% target.
-
-**What to expect:** The baseline has **99.740225%** availability, **2.585** nines, and **112.22 minutes** of downtime over 30 days. Its **2,598** predicted failures fit within the 99.5% target's 5,000-failure budget, but exceed the 99.9% target's 1,000-failure budget.
-
-Run the design with extra Orders and Inventory copies:
-
+**Explanation:** Calculate the baseline and compare both targets.
+![Improved output passes both targets](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/analyze+topology-improved.png)
 ```bash
 node analyze_topology.js topology-improved.yaml
 ```
 
-**Explanation:** Calculates the improved design with two copies of each app tier.
+**Explanation:** Calculate the improved design using the same calculator.
+![Terminal comparison of baseline and improved results](https://raw.githubusercontent.com/poridhiEng/lab-asset/main/System%20Design%20Season%203/Milestone%2001/Module%203/Lab%2003/images/run-output.png)
 
-<p align="center">
-  <a href="images/analyze+topology-improved.png">
-    <img src="images/analyze+topology-improved.png" alt="Node.js improved output showing 99.939805 percent availability and MODEL PASS for both SLO targets" width="1000">
-  </a>
-</p>
+**What to expect:** Baseline availability is 99.740225%, with 2,598 predicted failures. Improved availability is 99.939805%, with 602 predicted failures. Compare these results with your calculations and correct any differences.
 
-**Improved output:** The calculator predicts 602 failed requests and passes both targets.
-
-**What to expect:** The improved design has **99.939805%** availability, **3.220** nines, and **26.00 minutes** of downtime. Its **602** predicted failures fit within both budgets, so both targets show `MODEL PASS`.
-
-| Result over 30 days | Baseline | Improved |
-| --- | --- | --- |
-| Availability | 99.740225% | 99.939805% |
-| Expected downtime | 112.22 minutes | 26.00 minutes |
-| Predicted failed requests | 2,598 | 602 |
-| 99.5% target | MODEL PASS | MODEL PASS |
-| 99.9% target | MODEL FAIL | MODEL PASS |
-
-`MODEL PASS` describes the calculation, not measured live traffic. Both commands completed with exit status `0`; `MODEL FAIL` for a target does not mean the Node.js command failed.
+`MODEL PASS` describes the model, not measured traffic. `MODEL FAIL` does not mean the command failed. Missing files require checking your folder; YAML errors require checking indentation. If `yaml` cannot load, repeat its installation in this folder.
 
 ---
 
-## Before you submit
-
-- Both calculator commands run without an `Error:` message.
-- Your baseline and improved results match the comparison table above, allowing for rounding.
-- `calculations.md` shows your working for both designs and both error budgets.
-- `slo-document.md` names the design and target you chose and explains how to measure it.
-- `reliability-report.md` compares the designs and states the assumptions and limitations.
-- Submit the six deliverable files. `package.json`, `package-lock.json`, and `node_modules/` support running the lab locally; they are not part of the six deliverables.
-
-If you see `No such file or directory`, check your current folder and the filename. If you see a YAML parsing error, check indentation and use spaces instead of tabs. If you see `Cannot find module 'yaml'`, run `npm install yaml@2` from `reliability-lab` and repeat the YAML check in Step 4.
-
-## Understanding checks
-
-1. Why does a request need both Orders and Inventory?
-2. Why can the system fall under 99.9% even though every component is at least 99.9% available on its own?
-3. Does choosing a higher target make the service more reliable by itself? Why?
-4. Give one real reason the actual availability could be lower than this model predicts.
-5. What would you measure in the live service to check the 99.9% target?
-
 ## Conclusion
 
-You described a service, calculated its availability, and checked your answers with Node.js. You also chose a target and explained how extra copies help meet it. Use this model to study more complex request paths in later labs.
+Use live request counts to test your chosen target. In later labs, extend the model to more complex request paths and shared failures.
