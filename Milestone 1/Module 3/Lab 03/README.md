@@ -2,7 +2,13 @@
 
 ![Ordering API with two copies each of Orders and Inventory](images/improved-topology.png)
 
-Model a service and calculate its availability, the share of time it can handle requests. Compare two designs with Node.js, then choose a reliability target.
+A service can have reliable parts and still fail too often as a whole. For example, an order needs Gateway, Orders, Inventory, and Database to work together. If any required part fails, the request can fail. Before choosing a reliability target, we need to understand how these dependencies affect availability, the share of time a service can handle requests.
+
+In this lab, you will model this request path and compare two designs: one with a single copy of each part, and one with extra Orders and Inventory copies. The purpose is to estimate whether a design can meet a success target before deploying it. You will also see why adding copies helps and why it does not remove every source of failure.
+
+The steps build on each other. First, write the design in YAML so its parts and availability assumptions are clear. Next, calculate availability by hand to understand the formulas, then use Node.js to check your answers. Add extra copies and compare the results to see how a design change affects predicted failures. Finally, write a target and a short report to explain your choice and how you would check it using real requests.
+
+By the end, you will know how to connect a service design to a reliability target, explain your calculations, and recognize the limits of a model. The calculations help you plan; live measurements show whether the service actually meets its target.
 
 ## Objective
 
