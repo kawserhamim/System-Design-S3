@@ -49,7 +49,7 @@ A replica is another copy doing the same job. Two independent three-nine apps fa
 
 ## Compare the Designs
 
-![Yearly downtime for single, serial, and parallel designs](./images/availability-calculation-result.png)
+![Single, serial, and parallel designs with availability percentages and yearly downtime](./images/availability-calculation-result.png)
 
 Every part below has 99.9% availability. The connections change the result.
 
@@ -69,8 +69,6 @@ The load balancer and database are shared dependencies: either can stop both app
 
 ## Step 1: Create the Project
 
-![Node.js version check showing v22.16.0](./images/node-install.png)
-
 Install Node.js in an Ubuntu/Debian terminal. Skip installation if it is already available.
 
 ```bash
@@ -86,7 +84,7 @@ node --version
 
 **Explanation:** Prints your Node.js version, which may differ from the screenshot.
 
-![Terminal creating m3-l1 and listing the calculator and CSV files](./images/file-command.png)
+![Node.js version check showing v22.16.0](./images/node-version.png)
 
 Create the project files:
 
@@ -98,9 +96,11 @@ ls
 
 **Explanation:** Creates the folder and two empty files, then lists their names.
 
-![Editor showing availability.js and components.csv in m3-l1](./images/create-file.png)
+![Terminal creating m3-l1 and listing the calculator and CSV files](./images/file-command.png)
 
 Open `m3-l1` in your editor. Both files should appear as shown; no npm packages are needed.
+
+![Editor showing availability.js and components.csv in m3-l1](./images/create-file.png)
 
 ---
 
@@ -262,8 +262,6 @@ Use `3` for three nines, not `99.9`. Keep the header exactly as shown and avoid 
 
 ## Step 4: Run the Calculator
 
-![Four Node.js demo reports comparing availability and downtime](./images/demo-output.png)
-
 From `m3-l1`, run the built-in examples:
 
 ```bash
@@ -272,9 +270,9 @@ node availability.js --demo
 
 **Explanation:** Prints four designs without reading your CSV.
 
-**What to expect:** The combined design has **99.889910%** availability and **578.63 minutes/year** of downtime.
+![Four Node.js demo reports comparing availability and downtime](./images/demo-output.png)
 
-![CSV report showing 578.63 minutes of yearly downtime](./images/csv-system-output.png)
+**What to expect:** The combined design has **99.889910%** availability and **578.63 minutes/year** of downtime.
 
 Calculate your saved design:
 
@@ -284,9 +282,9 @@ node availability.js --csv components.csv
 
 **Explanation:** Reads the CSV and prints the system report.
 
-**What to expect:** The result matches the demo's combined design.
+![CSV report showing 578.63 minutes of yearly downtime](./images/csv-system-output.png)
 
-![Direct comparison of two three-nine components in serial and parallel](./images/serial-parallel.png)
+**What to expect:** The result matches the demo's combined design.
 
 Compare two components directly:
 
@@ -297,9 +295,9 @@ node availability.js --nines 3 3 --topology parallel
 
 **Explanation:** Uses the same inputs with two different connection types.
 
-**What to expect:** Serial downtime is **1050.67 minutes/year**; parallel downtime is **0.53 minutes/year**.
+![Direct comparison of two three-nine components in serial and parallel](./images/serial-parallel.png)
 
-![Improved load balancer reduces yearly downtime to 105.64 minutes](./images/improved-lb-output.png)
+**What to expect:** Serial downtime is **1050.67 minutes/year**; parallel downtime is **0.53 minutes/year**.
 
 Change `LB-1,3,lb` to `LB-1,4,lb` in `components.csv`, save it, and run again:
 
@@ -308,6 +306,8 @@ node availability.js --csv components.csv
 ```
 
 **Explanation:** Recalculates the system with a four-nine load balancer.
+
+![Improved load balancer reduces yearly downtime to 105.64 minutes](./images/improved-lb-output.png)
 
 **What to expect:** Availability rises to **99.979901%** and downtime falls to **105.64 minutes/year**. The demo keeps its original values.
 
