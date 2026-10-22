@@ -69,8 +69,6 @@ For 999 good and one bad request, the SLI is **99.9%**.
 
 ## Step 2: Write the Budget Calculator
 
-![Node.js version check showing v22.16.0](./images/node-version.png)
-
 Install Node.js in an Ubuntu/Debian terminal, or skip installation if you completed Lab 1:
 
 ```bash
@@ -86,7 +84,7 @@ node --version
 
 **Explanation:** Prints the installed version, which may differ from the screenshot.
 
-![Terminal creating m3-l2 and listing all three lab files](./images/file-create.png)
+![Node.js version check showing v22.16.0](./images/node-version.png)
 
 Create the practice folder and files:
 
@@ -98,9 +96,13 @@ ls
 
 **Explanation:** Creates three empty files and lists their names.
 
+![Terminal creating m3-l2 and listing all three lab files](./images/file-create.png)
+
+Open `m3-l2` in your editor.
+
 ![Editor Explorer showing the calculator, alert rule, and SLO document](./images/folder-structure.png)
 
-Open `m3-l2` in your editor. Use 10,000,000 counted requests and 4,000 errors from a rolling 30-day window, meaning the latest 30 days rather than a calendar month. Paste this into `calculate-budget.js`; no npm packages are needed.
+Use 10,000,000 counted requests and 4,000 errors from a rolling 30-day window, meaning the latest 30 days rather than a calendar month. Paste this into `calculate-budget.js`; no npm packages are needed.
 
 ```javascript
 // Calculate the request-based error budget used in this lab.
@@ -227,8 +229,6 @@ Labels identify the service (`job`), response code (`code`), and path (`route`).
 
 ## Step 5: Run the Calculator and Validate the Rule
 
-![Node.js calculator output showing 40 percent budget used and SLO met](./images/budget-output.png)
-
 From `m3-l2`, run the calculator:
 
 ```bash
@@ -237,11 +237,11 @@ node calculate-budget.js
 
 **Explanation:** Prints the budget and measured good-request percentage.
 
+![Node.js calculator output showing 40 percent budget used and SLO met](./images/budget-output.png)
+
 **What to expect:** **10,000** failures allowed, **6,000** remaining, and **40%** used. The **99.96%** SLI meets the target.
 
 ### Download the Rule Tool
-
-![Prometheus archive download in progress at 11 percent](./images/download-output.png)
 
 Stay in `m3-l2`. These commands use `curl` and `tar` on Linux with a 64-bit Intel or AMD processor.
 
@@ -252,11 +252,11 @@ curl -fLO https://github.com/prometheus/prometheus/releases/download/v3.5.0/prom
 
 **Explanation:** Downloads the archive containing `promtool`, the rule-file validation tool.
 
+![Prometheus archive download in progress at 11 percent](./images/download-output.png)
+
 **What to expect:** The screenshot shows 11%; wait for 100% and the prompt before extracting.
 
 ### Extract the Tool
-
-![Extraction command and promtool filename](./images/extract-output.png)
 
 Extract only the validation tool:
 
@@ -268,13 +268,13 @@ ls prometheus-3.5.0.linux-amd64
 
 **Explanation:** Extracts `promtool` and lists its folder.
 
+![Extraction command and promtool filename](./images/extract-output.png)
+
 **What to expect:** `tar` prints nothing; `ls` prints `promtool`.
 
 ### Validate the Rule
 
-![Promtool reports SUCCESS: 1 rules found](./images/run-output.png)
-
-Use `m3-l2`, not the screenshot directory:
+From `m3-l2`, validate the rule:
 
 ```bash
 ./prometheus-3.5.0.linux-amd64/promtool check rules orders-api-rules.yaml
@@ -282,7 +282,9 @@ Use `m3-l2`, not the screenshot directory:
 
 **Explanation:** Checks the YAML and PromQL rule syntax.
 
-**What to expect:** `SUCCESS: 1 rules found`; this validates the file without sending alerts.
+![Promtool reports SUCCESS: 1 rules found](./images/run-output.png)
+
+**What to expect:** `SUCCESS: 1 rules found`; this validates the file without sending alerts. The screenshot uses a different working directory; your prompt should show `m3-l2`.
 
 ---
 

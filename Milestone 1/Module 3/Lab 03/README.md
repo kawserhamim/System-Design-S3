@@ -1,6 +1,6 @@
 # Topology Driven Reliability Modeling
 
-![Ordering API with two copies each of Orders and Inventory](images/improved-topology.png)
+![Baseline Ordering API request path through Gateway, Orders, Inventory, and Database](images/series-system-architecture.png)
 
 A service can have reliable parts and still fail too often as a whole. For example, an order needs Gateway, Orders, Inventory, and Database to work together. If any required part fails, the request can fail. Before choosing a reliability target, we need to understand how these dependencies affect availability, the share of time a service can handle requests.
 
@@ -58,8 +58,6 @@ A service level objective (SLO) is a success target. Its error budget is the all
 
 ## Step 1: Create the lab folder
 
-![Terminal creating and entering reliability-lab](images/reliability-lab.png)
-
 Use Bash, a text editor, and Node.js with npm. This lab models a service; no service deployment is needed.
 
 ```bash
@@ -69,16 +67,20 @@ cd reliability-lab
 
 **Explanation:** Create the workspace and run all remaining commands here.
 
+![Terminal creating and entering reliability-lab](images/reliability-lab.png)
+
 ---
 
 ## Step 2: Write the baseline topology
 
-![Terminal creating topology.yaml](images/topology-yaml.png)
 ```bash
 touch topology.yaml
 ```
 
 **Explanation:** Create the file, then paste the YAML below in your editor.
+
+![Terminal creating topology.yaml](images/topology-yaml.png)
+
 ```yaml
 service: ordering-api
 window_days: 30
@@ -113,12 +115,13 @@ Use spaces for indentation. Database represents one logical managed multi-AZ ser
 
 ## Step 3: Calculate both error budgets
 
-![Terminal creating calculations.md](images/calculations.png)
 ```bash
 touch calculations.md
 ```
 
 **Explanation:** Create your written calculation file.
+
+![Terminal creating calculations.md](images/calculations.png)
 
 Write the following working in `calculations.md`. A 30-day window contains 43,200 minutes. Keep full precision until the final answer.
 
@@ -147,37 +150,47 @@ Nines describe closeness to 100%: 99% is two nines and 99.9% is three. Failed-re
 
 ## Step 4: Write the calculator
 
-![Installed Node.js and npm versions](images/node-version.png)
 ```bash
 node --version
 npm --version
 ```
 
-**Explanation:** Confirm both tools are installed; otherwise install Node.js with npm before continuing.
-![npm init creates package.json](images/init.png)
+**Explanation:** Confirm both tools are installed; otherwise install Node.js with npm before continuing. Your versions may differ from the screenshot.
+
+![Installed Node.js and npm versions](images/node-version.png)
+
 ```bash
 npm init -y
 ```
 
 **Explanation:** Create the local Node.js project.
-![npm installs the YAML package](images/yaml.png)
+
+![npm init creates package.json](images/init.png)
+
 ```bash
 npm install yaml@2
 ```
 
 **Explanation:** Install the package used to read YAML.
-![Node.js prints YAML is ready](images/yaml-ready.png)
+
+![npm installs the YAML package](images/yaml.png)
+
 ```bash
 node -e "require('yaml'); console.log('YAML is ready')"
 ```
 
 **Explanation:** Confirm the YAML package loads before continuing.
-![Terminal creating analyze_topology.js](images/analyze.png)
+
+![Node.js prints YAML is ready](images/yaml-ready.png)
+
 ```bash
 touch analyze_topology.js
 ```
 
 **Explanation:** Create the calculator file and paste the complete code below.
+
+![Terminal creating analyze_topology.js](images/analyze.png)
+
 ```javascript
 const fs = require('node:fs');
 const YAML = require('yaml');
@@ -306,12 +319,14 @@ Use the CommonJS project created above. Invalid YAML, missing fields, or invalid
 
 ## Step 5: Add service copies
 
-![Improved design with two Orders and two Inventory copies](images/improved-topology.png)
 ```bash
 cp topology.yaml topology-improved.yaml
 ```
 
 **Explanation:** Copy the baseline, then replace the new file with this design.
+
+![Improved design with two Orders and two Inventory copies](images/improved-topology.png)
+
 ```yaml
 service: ordering-api
 window_days: 30
@@ -362,12 +377,14 @@ Gateway and the logical Database remain required single tiers. Either can still 
 
 ## Step 6: Write the SLO document
 
-![Terminal creating slo-document.md](images/slo.png)
 ```bash
 touch slo-document.md
 ```
 
 **Explanation:** Create the target document and fill it using these headings.
+
+![Terminal creating slo-document.md](images/slo.png)
+
 ```markdown
 # SLO Document, ordering-api
 
@@ -400,12 +417,14 @@ Check the live SLI against the target.
 
 ## Step 7: Write the reliability report
 
-![Terminal creating reliability-report.md](images/reliability-labb.png)
 ```bash
 touch reliability-report.md
 ```
 
 **Explanation:** Create a report of about one page using the structure below.
+
+![Terminal creating reliability-report.md](images/reliability-labb.png)
+
 ```markdown
 # Reliability Report, ordering-api
 
@@ -438,25 +457,27 @@ live request counts to determine whether the service meets its SLO.
 
 ---
 
-## Step 8: Run the following commands in the terminal
-
-![Completed lab folder with six deliverables and Node.js project files](images/whole-folder.png)
+## Step 8: Run and compare both designs
 
 Save all six files before running. `package.json`, `package-lock.json`, and `node_modules/` support local execution; submit the six deliverables.
 
-![Baseline output passes 99.5% and fails 99.9%](images/analyze+topology.png)
+![Completed lab folder with six deliverables and Node.js project files](images/whole-folder.png)
+
 ```bash
 node analyze_topology.js topology.yaml
 ```
 
 **Explanation:** Calculate the baseline and compare both targets.
-![Improved output passes both targets](images/analyze+topology-improved.png)
+
+![Baseline output passes 99.5% and fails 99.9%](images/analyze+topology.png)
+
 ```bash
 node analyze_topology.js topology-improved.yaml
 ```
 
 **Explanation:** Calculate the improved design using the same calculator.
-![Terminal comparison of baseline and improved results](images/run-output.png)
+
+![Improved output passes both targets](images/analyze+topology-improved.png)
 
 **What to expect:** Baseline availability is 99.740225%, with 2,598 predicted failures. Improved availability is 99.939805%, with 602 predicted failures. Compare these results with your calculations and correct any differences.
 
