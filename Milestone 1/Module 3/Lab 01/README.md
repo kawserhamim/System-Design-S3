@@ -2,7 +2,11 @@
 
 ![Choose a design, calculate availability, and compare downtime](./images/availability.png)
 
-Why can a service still go down even when it has backup servers? In this lab, you will build a simple Node.js calculator to learn how each part of a service affects its availability, or how much of the time it works for users. Using a URL shortener as an example, you will compare designs and calculate their expected downtime without setting up real servers. This will help you understand where backups help and which parts to improve to keep the whole service working.
+When you design a service, choosing reliable servers is only part of the problem. A request may depend on a load balancer, an app, and a database. If any required part fails, users may lose access even when the other parts are working. The purpose of this lab is to help you estimate the availability of the whole service—the share of time it can work for users—and understand how its design affects expected downtime.
+
+You will build a small Node.js calculator, describe a service in a CSV file, and compare required components in series with backup copies in parallel. You will then model a load balancer, two app copies, and a database, and improve the load balancer to see how the result changes. These exercises let you compare design choices before spending time setting up servers.
+
+By completing this lab, you will learn to turn availability percentages and “nines” into expected downtime, calculate availability for different component arrangements, and explain why backup apps do not remove failures in shared dependencies. You will also learn when the calculations depend on assumptions such as independent failures. This gives you a way to justify which part of a design to improve and prepares you for setting reliability targets in Lab 2.
 
 ## Objective
 

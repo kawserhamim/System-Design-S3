@@ -2,7 +2,11 @@
 
 ![Set a reliability target, calculate its error budget, and alert on fast burn](./images/budget.png)
 
-How do we know whether a service is reliable enough for its users? In this lab, you will set a reliability target for an Orders API, a service that lets programs work with orders, and build a simple Node.js calculator to find how many failed requests that target allows. You will then write and check an alert rule for when failures use up this allowance too quickly, without deploying the service. This will help you measure whether a service meets its target and understand when the team needs to investigate problems.
+After estimating a design’s availability in Lab 1, you need to decide what reliability users should expect and how to judge whether the service delivers it. The purpose of this lab is to turn “the service should be reliable” into a clear, measurable target for an Orders API, a service that lets programs work with orders. You will define which requests count, what a successful response means, and how many failures are acceptable over 30 days.
+
+You will write a service level objective (SLO), build a Node.js calculator for its error budget—the number of failures the target allows—and create a Prometheus alert rule for when errors consume that budget too quickly. With 10,000,000 counted requests and a 99.9% target, you will calculate the failure allowance and how much remains after 4,000 failures. You will then check the alert rule’s syntax locally. This gives you practice making reliability decisions before connecting the rule to a running service.
+
+By completing this lab, you will learn to distinguish a measured service level indicator (SLI) from an SLO target, classify good, bad, and excluded requests, and decide whether the example service meets its target. You will also learn how burn rate shows the speed of budget consumption and why an alert checks both a long and a short time window. These skills help a team agree on reliability expectations and recognize when failures need urgent investigation.
 
 ## Objective
 
