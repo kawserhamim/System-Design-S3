@@ -313,11 +313,111 @@ Inputs + results + policy + reflection -> reliability baseline
 
 **Explanation:** Record the evidence behind your reliability decision.
 
-Organize `reliability-baseline.md` into scope, assumptions, topology results, SLO decision, budgets, alerts, future requirements, and reflection. Include the calculator command, `node reliability_baseline_calc.js`, and the verified output. Save the completed document and submit it together with `reliability_baseline_calc.js`.
+`reliability-baseline.md` is your written explanation of the design, results, and reliability target. The JavaScript file calculates the numbers; this Markdown file explains what those numbers mean and what you recommend.
 
-Require later milestones to preserve the replica assumptions and recalculate after dependency changes. Track Gateway and Database as required dependencies. Record the date and reason for revisions. Compare production SLIs with this model.
+Open `reliability-baseline.md` in your editor. Copy the template below into it. The example values match this lab's inputs. If you changed any inputs, update the tables and decision using your calculator output. Replace every `[ ... ]` instruction with your own text.
 
-Write a 3-5-line reflection: Which component assumption most affected availability? Did Lab 02's target survive, or did the architecture need revision? Use the calculator's sensitivity results as evidence.
+```markdown
+# URL Shortener Reliability Baseline
+
+## 1. Purpose and scope
+Estimate whether the URL shortener design can support a 99.9% reliability target.
+The model includes Gateway, Shortener Service, Cache, and Database.
+Every modeled request needs all four tiers. The client is excluded.
+
+## 2. Assumptions
+- Window: the most recent 30 days, or 43,200 minutes.
+- Traffic: 5,000,000 valid requests, spread uniformly over the window.
+- Failures of different components are independent.
+- Either replica can handle the full traffic and has the required data.
+- Traffic reaches a working replica immediately.
+- Shared failures, retries, and switching delays are excluded from the model.
+- Database is one logical managed multi-AZ service; its availability already includes internal redundancy.
+- These values are practice assumptions, not production measurements.
+
+| Tier | Assumed availability | Baseline copies | Improved copies |
+| --- | --- | --- | --- |
+| Gateway | 99.95% | 1 | 1 |
+| Shortener Service | 99.90% | 1 | 2 |
+| Cache | 99.95% | 1 | 2 |
+| Database | 99.99% | 1 logical | 1 logical |
+
+## 3. Request counting rules
+Skip 499 responses and /healthz requests.
+Count remaining completed 2xx, 3xx, and 4xx responses as good.
+Count remaining 5xx responses as bad. Count each retry separately in live measurements.
+SLI = good requests / valid requests.
+Use external checks to detect failures that never reach the gateway.
+
+## 4. Calculation and results
+Run: node reliability_baseline_calc.js
+
+Required tiers: multiply their availability values.
+Parallel copies: 1 - (1 - copy 1 availability) * (1 - copy 2 availability).
+Expected downtime: (1 - system availability) * 43200 minutes.
+Predicted failures: (1 - system availability) * 5000000 requests.
+
+| Result over 30 days | Baseline | Improved |
+| --- | --- | --- |
+| Availability | 99.7901% | 99.9399% |
+| Equivalent nines | 2.678 | 3.221 |
+| Expected downtime | 90.66 minutes | 25.97 minutes |
+| Predicted failed requests | 10,493 | 3,006 |
+| Meets 99.9% in the model | No | Yes |
+| Meets 99.95% in the model | No | No |
+
+Calculator output:
+[Paste the full terminal output from Step 6 here.]
+
+## 5. SLO decision and error budgets
+Choose at least 99.9% good requests over a rolling 30-day window.
+This choice depends on deploying both Shortener Service replicas and both Cache replicas.
+The baseline design does not support this target in the model.
+Keep 99.95% as a stretch target; neither current design supports it.
+
+Allowed failures = valid requests * (1 - target / 100).
+
+| Target | Allowed failures at 5 million requests | Equivalent downtime |
+| --- | --- | --- |
+| 99.9% | 5,000 | 43.20 minutes |
+| 99.95% | 2,500 | 21.60 minutes |
+
+The improved model predicts 3,006 failures, below the 5,000-failure allowance.
+Recalculate request budgets using actual traffic. Equivalent downtime assumes uniform traffic.
+A model passing a target does not prove the live service meets it.
+
+## 6. Alert policy for the selected 99.9% SLO
+Burn rate = observed bad-request fraction / 0.001.
+Both the long and short windows must exceed the threshold.
+
+| Alert | Long + short window | Burn rate | Error percentage | Action |
+| --- | --- | --- | --- | --- |
+| Fast | 1h + 5m | Above 14.4x | Above 1.44% | Page the team |
+| Medium | 6h + 30m | Above 6x | Above 0.60% | Page the team |
+| Slow | 3d + 6h | Above 1x | Above 0.10% | Create a ticket |
+
+Review tickets the next business day. Prioritize reliability fixes when the budget runs out.
+Recalculate the error-percentage thresholds if the SLO changes.
+
+## 7. Requirements for later milestones
+Preserve the replica capacity, data, and routing assumptions.
+Track Gateway and Database as required dependencies that can stop the service.
+To pursue 99.95%, improve or bypass Gateway and recalculate the whole design.
+Recalculate whenever dependencies, availability assumptions, or replica counts change.
+Compare the model with production SLIs and external checks after deployment.
+
+## 8. Reflection
+[Write 3–5 lines in your own words. Which baseline tier gives the largest gain
+when made perfect? Quote its gain from the calculator. Why do replicas help?
+What design changes were needed to support the 99.9% target?]
+
+## 9. Revision record
+| Date | Change and reason |
+| --- | --- |
+| [YYYY-MM-DD] | Initial baseline for the URL shortener. |
+```
+
+**Before submitting:** Check that your tables match your calculator output, paste the output, write your reflection, and fill in the revision date. Save both `reliability-baseline.md` and `reliability_baseline_calc.js`; submit these two files together.
 
 ---
 
