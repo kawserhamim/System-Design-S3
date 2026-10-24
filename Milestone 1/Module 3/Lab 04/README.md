@@ -1,80 +1,84 @@
 # Reliability Baseline for a URL Shortener
 
-![URL shortener reliability baseline](images/thumb.png)
+![Labs 1, 2, and 3 feed the reliability baseline used to review later milestones](images/thumb.png)
 
-Combine Labs 01, 02, and 03 into a reliability reference for later milestones.
+Before building a URL shortener, you need to decide how reliable it should be and whether your design can support that goal. A service may have backup copies and still fail because every request depends on other parts. The purpose of this lab is to combine the availability math from Lab 1, the reliability targets from Lab 2, and the design modeling from Lab 3 into one reliability baseline: a written reference for checking future design changes.
+
+You will use Node.js to compare a design with one copy of each component against a design with extra Shortener Service and Cache copies. You will calculate expected downtime and failed requests, compare them with reliability targets, and record your decision in `reliability-baseline.md`. This teaches you how to connect a design choice, such as adding a replica, to a measurable result.
+
+These skills matter because teams need evidence when choosing what to improve and what reliability to promise users. By the end, you will be able to explain which target the model supports, which dependencies still limit it, and when errors should trigger an alert. You will also understand why a prediction needs assumptions and must later be checked against live requests. Your baseline will help you review later milestones whenever the service design changes.
 
 ## Objective
 
 ```text
-Model -> Calculate -> Set targets
+Model -> calculate -> choose a target -> record the decision
 ```
 
-**Explanation:** Connect the model to a measurable reliability target.
+**Explanation:** Connect design choices to expected failures.
 
 By the end, you can:
 
-- Calculate availability and equivalent nines.
+- Calculate availability, downtime, and equivalent nines.
 - Choose a service level objective (SLO), a target for successful requests.
-- Record error budgets and alert thresholds.
+- Record failure allowances and alert thresholds.
 
 ## Deliverable
 
 ```text
-L1 calculator + L2 SLO + L3 topology -> reliability-baseline.md
+reliability_baseline_calc.js + reliability-baseline.md
 ```
 
-**Explanation:** Combine the earlier results into one reference document.
-
-Create two files: `reliability-baseline.md` for your reliability decisions and `reliability_baseline_calc.js` for the Node.js calculator. Keep both in the same folder. AI tools may help; verify their output.
+**Explanation:** Submit the calculator and a report explaining its results.
 
 ## Required dependencies
 
-![Four required tiers in series](images/baseline-topology.png)
+![Client requests pass through Gateway, Shortener Service, Cache, and Database](images/baseline-topology.png)
 
-Every modeled request needs Gateway, Shortener Service, Cache, and Database. The client is excluded. Real cache hits may skip Database; this simplified chain is not a worst-case guarantee.
+Every modeled request needs all four tiers. Exclude the client. Real cache hits may skip Database; this simplified model assumes otherwise.
 
 ## Parallel copies
 
-![Two copies each of Shortener Service and Cache](images/improved-topology.png)
+![The improved design has two interchangeable Shortener Service copies and two Cache copies](images/improved-topology.png)
 
-Replicas are interchangeable copies, not shards holding different data. Either Cache copy must hold the required data. Either copy of each replicated tier must handle the full load alone, and traffic must reach a working copy. Assume independent failures, no retries, no switching delay, and no shared failures. Database is one logical managed multi-AZ service; its assumed 99.99% already includes internal redundancy.
+Replicas are interchangeable copies with the required data and full traffic capacity. Assume independent failures, immediate routing, and no shared failures or switching delays. Database availability includes internal redundancy.
 
-## Step 1: Set up Node.js and the project
+## Step 1: Install Node.js and create the files
 
-Use an Ubuntu/Debian terminal and a text editor, as in Labs 1–3. Node.js runs JavaScript outside the browser. If you already installed it for the earlier labs, check its version first:
+```text
+Check Node.js -> install if missing -> create files -> open editor
+```
+
+**Explanation:** Prepare an Ubuntu/Debian terminal and a text editor.
+
+Check Node.js first; skip installation if this succeeds:
 
 ```bash
 node --version
 ```
 
-**Explanation:** Prints the installed Node.js version. A result such as `v22.23.1` means the runtime is available; your version may differ. If the command succeeds, skip installation below.
+**Explanation:** Prints your installed version.
 
-### Install Node.js if needed
-
-If the terminal reports `node: command not found`, run:
+If Node.js is missing, install it:
 
 ```bash
 sudo apt update
 sudo apt install -y nodejs
 ```
 
-**Explanation:** Refreshes the Ubuntu/Debian package list and installs Node.js. Enter your system password if prompted and wait for installation to finish.
+**Explanation:** Refreshes package information and installs the JavaScript runtime.
 
-Check again:
+Confirm it works:
 
 ```bash
 node --version
 node -e "console.log('Node.js is ready')"
 ```
 
-**What to expect:** A version beginning with `v`, followed by `Node.js is ready`. This calculator uses built-in JavaScript features only. No npm packages, YAML library, or `npm init` step is needed.
+**Explanation:** Prints the version and a readiness message.
 
-See the [Node.js command-line documentation](https://nodejs.org/api/cli.html) for version checks and script execution.
+![Node.js v22.16.0 and the readiness message](images/node-version.png)
 
-### Create the lab folder and files
-
-From your course working directory, run:
+Your version may differ. No npm packages are needed.
 
 ```bash
 mkdir -p m3-l4
@@ -84,52 +88,46 @@ pwd
 ls
 ```
 
-**Explanation:** Creates the lab folder and two empty files. `pwd` shows your current directory; `ls` lists its contents.
+**Explanation:** Creates both files and confirms the working directory.
 
-**What to expect:** Your directory ends in `m3-l4`, and both filenames appear. Open this folder in your editor and keep your terminal here for the remaining commands.
+![Terminal creating m3-l4 and listing both deliverables](images/file-create.png)
 
-```text
-m3-l4/
-  reliability-baseline.md
-  reliability_baseline_calc.js
-```
+Open `m3-l4` in your editor. Run remaining commands here.
+
+![Editor showing the JavaScript calculator and Markdown report](images/whole-folder.png)
 
 ---
 
-## Step 2: Write the assumptions
+## Step 2: Record the assumptions
 
 ```text
-Components + request rules + traffic -> model inputs
+Tier availability + copy counts + traffic -> model inputs
 ```
 
-**Explanation:** Define the inputs before calculating availability.
-
-Open `reliability-baseline.md` and record these planning inputs. Values are practice assumptions, not measurements or provider guarantees.
+**Explanation:** Record these inputs in your report using Step 7's template.
 
 | Tier | Availability | Baseline copies | Improved copies |
-| :--- | ---: | ---: | ---: |
+| --- | --- | --- | --- |
 | Gateway | 99.95% | 1 | 1 |
 | Shortener Service | 99.90% | 1 | 2 |
 | Cache | 99.95% | 1 | 2 |
 | Database | 99.99% | 1 logical | 1 logical |
 
-Use a rolling 30-day window: 43,200 minutes and 5,000,000 assumed valid requests.
+Use 30 days, 43,200 minutes, and 5,000,000 uniformly distributed requests. These are practice assumptions.
 
-Carry forward Lab 02: exclude 499 responses and `/healthz`. Count remaining completed 2xx/3xx/4xx as good and 5xx as bad. Count retries separately. The service level indicator (SLI) is `good / valid`; use external checks for failures that never reach the gateway.
+Skip 499 and `/healthz`. Count remaining completed 2xx/3xx/4xx as good and 5xx as bad. The service level indicator (SLI) is `good / valid`. Count live retries separately; check failures before Gateway externally.
 
 ---
 
 ## Step 3: Write the calculator
 
 ```text
-Copies -> tier availability -> composite availability
+Parallel copies -> required tiers -> downtime and budgets
 ```
 
-**Explanation:** Calculate each tier first, then multiply the required tiers.
+**Explanation:** Combine copies first, then multiply required tier availability.
 
-Open `reliability_baseline_calc.js` in your editor and paste the complete code below. Save the file before running it. Multiply required tiers; parallel copies fail only when both fail.
-
-Equivalent nines express closeness to 100%: 99% is two nines; 99.9% is three. Use `-log10(1 - availability)`, using decimal availability.
+Save this code in `reliability_baseline_calc.js`. Nines use `-log10(1 - availability)`; 99.9% means three nines.
 
 ```javascript
 const WINDOW_DAYS = 30;
@@ -142,12 +140,10 @@ const BASELINE = {
   Database: 0.9999,
 };
 
-// Every required tier must work, so multiply its availability.
 function serial(values) {
   return values.reduce((total, availability) => total * availability, 1);
 }
 
-// A parallel tier fails only when all interchangeable copies fail.
 function parallel(...copies) {
   const allFail = copies.reduce((total, availability) =>
     total * (1 - availability), 1);
@@ -164,7 +160,6 @@ function summarize(tiers) {
 }
 
 function main() {
-  // Copy the baseline so its original inputs stay available for comparison.
   const improved = { ...BASELINE };
   for (const tier of ["Shortener Service", "Cache"]) {
     improved[tier] = parallel(BASELINE[tier], BASELINE[tier]);
@@ -206,227 +201,155 @@ function main() {
 main();
 ```
 
-**What this file does:** Calculates both designs, budgets, and the gain from making each baseline tier perfect.
+**What this file does:** Compares both designs, calculates budgets, and measures improvement potential.
 
 ---
 
-## Step 4: Write the SLO decision
+## Step 4: Choose the SLO
 
 ```text
-Composite availability -> compare target -> record decision
+Predicted failures <= allowed failures -> model supports target
 ```
 
-**Explanation:** Check whether the design supports the chosen target.
+**Explanation:** Record your decision in the report.
 
-Keep Lab 02's 99.9% target conditional on deploying both replicated tiers. Add 99.95% as a new stretch target.
-
-| Target | Allowed failures at 5 million requests | Equivalent minutes | Baseline | Improved |
-| :--- | ---: | ---: | :--- | :--- |
+| Target | Failure allowance | Equivalent minutes | Baseline | Improved |
+| --- | --- | --- | --- | --- |
 | 99.9% | 5,000 | 43.20 | Fail | Pass |
 | 99.95% | 2,500 | 21.60 | Fail | Fail |
 
-The request budget is `valid requests × (1 - target / 100)`. Equivalent downtime assumes uniform traffic; busy-period outages can cause more failures. Recalculate budgets from actual traffic.
-
-Gateway's 99.95% caps the chain. Reaching 99.95% requires improving or bypassing that dependency, then checking the whole model. Improving Database alone is insufficient.
+Choose 99.9% with both replicated tiers. Gateway caps availability at 99.95%; improve it for that stretch target. Budgets use actual traffic; equivalent minutes assume uniform traffic.
 
 ---
 
-## Step 5: Write the alert policy
+## Step 5: Record the alert policy
 
 ```text
-Bad / valid requests -> burn rate -> paired windows -> alert
+Error fraction / allowed fraction -> burn rate -> paired windows
 ```
 
-**Explanation:** Check both alert windows before triggering the action.
+**Explanation:** Both windows must exceed the threshold before triggering the action.
 
-Burn rate means `observed bad fraction / allowed bad fraction`. Keep Lab 02's paired windows: both must exceed the threshold.
-
-| Alert | Long + short window | Burn rate | Bad requests | Action |
-| :--- | :--- | ---: | ---: | :--- |
+| Alert | Long + short window | Burn rate | Errors | Action |
+| --- | --- | --- | --- | --- |
 | Fast | 1h + 5m | >14.4x | >1.44% | Page |
 | Medium | 6h + 30m | >6x | >0.60% | Page |
 | Slow | 3d + 6h | >1x | >0.10% | Ticket |
 
-These are lookback windows, not waiting periods. With steady traffic, 14.4x for one hour spends 2% of the monthly budget. If the SLO changes, recalculate request budgets and error-percentage thresholds. Review tickets the next business day; prioritize reliability fixes when the budget runs out.
+For a changed SLO, recalculate thresholds. Review tickets next business day; prioritize fixes when the budget runs out.
 
 ---
 
-## Step 6: Run and verify the calculator
+## Step 6: Run the calculator
 
 ```text
-Calculator -> terminal results -> baseline document
+Save -> check syntax -> run -> compare results
 ```
 
-**Explanation:** Use the output to verify your documented results.
-
-From `m3-l4`, confirm that the saved calculator is present and check its JavaScript syntax:
+**Explanation:** Execute the saved calculator from `m3-l4`.
 
 ```bash
-ls
 node --check reliability_baseline_calc.js
-```
-
-**Explanation:** `ls` should show both lab files. `node --check` checks syntax without executing the calculator. It prints nothing when the syntax is valid. If it reports an error, correct the indicated line and save again.
-
-Run the calculator:
-
-```bash
 node reliability_baseline_calc.js
 ```
 
-**Explanation:** Prints modeled results and compares them with both targets.
+**Explanation:** Checks syntax silently on success, then prints the calculations.
 
-Expected terminal output:
+![Node.js output showing availability, SLO verdicts, budgets, and improvement gains](images/output.png)
 
-```text
-Baseline: 99.7901%, 2.678 nines, 90.66 min, 10493 predicted failed requests
-  SLO 99.9%: MODEL FAIL
-  SLO 99.95%: MODEL FAIL
-Improved: 99.9399%, 3.221 nines, 25.97 min, 3006 predicted failed requests
-  SLO 99.9%: MODEL PASS
-  SLO 99.95%: MODEL FAIL
+**What to expect:** Baseline: 99.7901%, 90.66 minutes, 10,493 predicted failures. Improved: 99.9399%, 25.97 minutes, 3,006 predicted failures. Only the improved design passes 99.9%. These are model predictions.
 
-Planning budgets:
-  99.9%: 5000 failed requests, 43.20 equivalent min
-  99.95%: 2500 failed requests, 21.60 equivalent min
+Missing `node`: revisit Step 1. Missing module: check `pwd`, `ls`, and filename. Syntax error: correct the indicated line. `MODEL FAIL` describes the design.
 
-Baseline improvement if one tier becomes perfect:
-  Gateway: +0.049920 percentage points
-  Shortener Service: +0.099890 percentage points
-  Cache: +0.049920 percentage points
-  Database: +0.009980 percentage points
-```
+<details>
+<summary>Earlier calculator reference</summary>
 
-**What to expect:** Baseline: 99.7901%, 2.678 nines, 90.66 minutes. Improved: 99.9399%, 3.221 nines, 25.97 minutes. Only the improved design passes 99.9%. Predicted failures are 10,493 and 3,006 under uniform traffic. These estimates are not measured SLO results.
+![Older Python output with the same numerical results](images/run-output.png)
 
-`MODEL FAIL` means the design falls below the target; it does not mean Node.js failed. The final section changes one baseline tier at a time to 100% availability. The largest gain belongs to Shortener Service; use this evidence in your reflection.
+Earlier reference only; run Node.js above.
 
-If `node` is not found, complete Step 1. If Node.js reports `Cannot find module`, use `pwd` and `ls` to check that you are in `m3-l4` and that the filename is exactly `reliability_baseline_calc.js`. If nothing prints, check that the file contains the full code, including `main();`, and save it. After changing inputs, save the file and rerun the same command.
+</details>
 
 ---
 
-## Step 7: Complete the baseline
+## Step 7: Write the baseline report
 
 ```text
-Inputs + results + policy + reflection -> reliability baseline
+Inputs + output + decision + reflection -> reliability-baseline.md
 ```
 
-**Explanation:** Record the evidence behind your reliability decision.
+**Explanation:** Explain what the results mean and what future designs must preserve.
 
-`reliability-baseline.md` is your written explanation of the design, results, and reliability target. The JavaScript file calculates the numbers; this Markdown file explains what those numbers mean and what you recommend.
-
-Open `reliability-baseline.md` in your editor. Copy the template below into it. The example values match this lab's inputs. If you changed any inputs, update the tables and decision using your calculator output. Replace every `[ ... ]` instruction with your own text.
+Copy this template into `reliability-baseline.md` without the outer fences. Check example values, replace bracketed instructions, and add your output and reflection.
 
 ```markdown
 # URL Shortener Reliability Baseline
 
-## 1. Purpose and scope
-Estimate whether the URL shortener design can support a 99.9% reliability target.
-The model includes Gateway, Shortener Service, Cache, and Database.
-Every modeled request needs all four tiers. The client is excluded.
+## Purpose and scope
+Check whether Gateway, Shortener Service, Cache, and Database support 99.9% reliability.
+Exclude the client. Every modeled request needs all four tiers.
 
-## 2. Assumptions
-- Window: the most recent 30 days, or 43,200 minutes.
-- Traffic: 5,000,000 valid requests, spread uniformly over the window.
-- Failures of different components are independent.
-- Either replica can handle the full traffic and has the required data.
-- Traffic reaches a working replica immediately.
-- Shared failures, retries, and switching delays are excluded from the model.
-- Database is one logical managed multi-AZ service; its availability already includes internal redundancy.
-- These values are practice assumptions, not production measurements.
+## Assumptions
+Use 30 days and 5,000,000 uniformly distributed requests.
+[Copy the tier table from Step 2.]
+Assume independent failures, full replica capacity, required data in either copy,
+and immediate routing. Exclude shared failures, retries, and switching delays.
+Database availability includes internal redundancy. Inputs are practice assumptions.
 
-| Tier | Assumed availability | Baseline copies | Improved copies |
-| --- | --- | --- | --- |
-| Gateway | 99.95% | 1 | 1 |
-| Shortener Service | 99.90% | 1 | 2 |
-| Cache | 99.95% | 1 | 2 |
-| Database | 99.99% | 1 logical | 1 logical |
+## Request rules
+Skip 499 and /healthz; count remaining completed 2xx/3xx/4xx as good and 5xx as bad.
+SLI = good / valid. Count live retries separately; use external checks before Gateway.
 
-## 3. Request counting rules
-Skip 499 responses and /healthz requests.
-Count remaining completed 2xx, 3xx, and 4xx responses as good.
-Count remaining 5xx responses as bad. Count each retry separately in live measurements.
-SLI = good requests / valid requests.
-Use external checks to detect failures that never reach the gateway.
+## Results
+Command: node reliability_baseline_calc.js
+Required tiers multiply; two parallel copies use 1 - (1 - A1) * (1 - A2).
+Downtime = (1 - availability) * 43200; failures = (1 - availability) * 5000000.
 
-## 4. Calculation and results
-Run: node reliability_baseline_calc.js
-
-Required tiers: multiply their availability values.
-Parallel copies: 1 - (1 - copy 1 availability) * (1 - copy 2 availability).
-Expected downtime: (1 - system availability) * 43200 minutes.
-Predicted failures: (1 - system availability) * 5000000 requests.
-
-| Result over 30 days | Baseline | Improved |
+| Metric | Baseline | Improved |
 | --- | --- | --- |
 | Availability | 99.7901% | 99.9399% |
-| Equivalent nines | 2.678 | 3.221 |
-| Expected downtime | 90.66 minutes | 25.97 minutes |
-| Predicted failed requests | 10,493 | 3,006 |
-| Meets 99.9% in the model | No | Yes |
-| Meets 99.95% in the model | No | No |
+| Nines | 2.678 | 3.221 |
+| Downtime | 90.66 minutes | 25.97 minutes |
+| Predicted failures | 10,493 | 3,006 |
 
-Calculator output:
-[Paste the full terminal output from Step 6 here.]
+[Paste your full calculator output here.]
 
-## 5. SLO decision and error budgets
-Choose at least 99.9% good requests over a rolling 30-day window.
-This choice depends on deploying both Shortener Service replicas and both Cache replicas.
-The baseline design does not support this target in the model.
-Keep 99.95% as a stretch target; neither current design supports it.
+## SLO and budgets
+Choose 99.9% with both replicated tiers: 3,006 predicted failures fit within 5,000.
+Neither design supports 99.95%, which allows 2,500 failures.
+Budgets use valid requests * (1 - target / 100). Recalculate with actual traffic.
+Model predictions do not prove live reliability.
 
-Allowed failures = valid requests * (1 - target / 100).
+## Alerts
+[Copy Step 5's table. State that both windows must exceed the threshold.]
+Review tickets next business day and prioritize fixes when the budget runs out.
 
-| Target | Allowed failures at 5 million requests | Equivalent downtime |
-| --- | --- | --- |
-| 99.9% | 5,000 | 43.20 minutes |
-| 99.95% | 2,500 | 21.60 minutes |
+## Future requirements
+Preserve replica capacity, data, and routing assumptions.
+Track Gateway and Database; recalculate after design changes.
+Improve or bypass Gateway to pursue 99.95%, then check the whole model.
+Compare predictions with live SLIs and external checks.
 
-The improved model predicts 3,006 failures, below the 5,000-failure allowance.
-Recalculate request budgets using actual traffic. Equivalent downtime assumes uniform traffic.
-A model passing a target does not prove the live service meets it.
+## Reflection
+[Write 3-5 lines: quote the largest gain from the calculator, explain why replicas
+help, and describe the changes needed to support 99.9%.]
 
-## 6. Alert policy for the selected 99.9% SLO
-Burn rate = observed bad-request fraction / 0.001.
-Both the long and short windows must exceed the threshold.
-
-| Alert | Long + short window | Burn rate | Error percentage | Action |
-| --- | --- | --- | --- | --- |
-| Fast | 1h + 5m | Above 14.4x | Above 1.44% | Page the team |
-| Medium | 6h + 30m | Above 6x | Above 0.60% | Page the team |
-| Slow | 3d + 6h | Above 1x | Above 0.10% | Create a ticket |
-
-Review tickets the next business day. Prioritize reliability fixes when the budget runs out.
-Recalculate the error-percentage thresholds if the SLO changes.
-
-## 7. Requirements for later milestones
-Preserve the replica capacity, data, and routing assumptions.
-Track Gateway and Database as required dependencies that can stop the service.
-To pursue 99.95%, improve or bypass Gateway and recalculate the whole design.
-Recalculate whenever dependencies, availability assumptions, or replica counts change.
-Compare the model with production SLIs and external checks after deployment.
-
-## 8. Reflection
-[Write 3–5 lines in your own words. Which baseline tier gives the largest gain
-when made perfect? Quote its gain from the calculator. Why do replicas help?
-What design changes were needed to support the 99.9% target?]
-
-## 9. Revision record
-| Date | Change and reason |
-| --- | --- |
-| [YYYY-MM-DD] | Initial baseline for the URL shortener. |
+## Revision
+[Enter your completion date and the reason for this revision.]
 ```
 
-**Before submitting:** Check that your tables match your calculator output, paste the output, write your reflection, and fill in the revision date. Save both `reliability-baseline.md` and `reliability_baseline_calc.js`; submit these two files together.
+**What this file does:** Records the assumptions, evidence, target, and recommendation.
+
+Save and submit `reliability-baseline.md` with `reliability_baseline_calc.js`.
 
 ---
 
 ## Conclusion
 
 ```text
-Reliability baseline -> later milestone reviews
+Later design changes -> recalculate -> update the baseline
 ```
 
-**Explanation:** Recheck the baseline when later milestones change the service.
+**Explanation:** Keep this reference current throughout later milestones.
 
-Review later architecture changes against this baseline. Compare predictions with measured request reliability.
+Compare later architecture changes with this baseline and check predictions against live requests.
